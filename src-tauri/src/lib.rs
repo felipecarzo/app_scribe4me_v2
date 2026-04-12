@@ -1,15 +1,34 @@
+use std::sync::Arc;
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Emitter, Manager,
 };
 
 mod sidecar;
+
+use sidecar::SidecarManager;
+
+// --- Tauri commands ---
 
 #[tauri::command]
 fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
+
+/// Send a JSON-RPC request to the sidecar and return the result.
+#[tauri::command]
+async fn sidecar_send(
+    method: String,
+    params: serde_json::Value,
+    state: tauri::State<'_, Arc<SidecarManager>>,
+) -> Result<serde_json::Value, String> {
+    let rx = state.send_request(&method, params)?;
+    rx.await.map_err(|_| "Sidecar response channel closed".to_string())?
+}
+
+// --- App setup ---
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -60,9 +79,31 @@ pub fn run() {
                 let _ = window.hide();
             }
 
+            // Spawn Python sidecar
+            let sidecar = Arc::new(SidecarManager::new());
+            let app_handle = app.handle().clone();
+
+            // Event callback: forward sidecar events to the frontend via Tauri events
+            let sidecar_for_spawn = Arc::clone(&sidecar);
+            if let Err(e) = sidecar_for_spawn.spawn(move |event_name, data| {
+                let payload = serde_json::json!({
+                    "event": event_name,
+                    "data": data,
+                });
+                if let Err(e) = app_handle.emit("sidecar-event", &payload) {
+                    eprintln!("Failed to emit sidecar event: {e}");
+                }
+            }) {
+                eprintln!("Failed to spawn sidecar: {e}");
+                // Continue without sidecar — UI will show disconnected state
+            }
+
+            // Store sidecar manager in Tauri state for commands
+            app.manage(sidecar);
+
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_app_version])
+        .invoke_handler(tauri::generate_handler![get_app_version, sidecar_send])
         .run(tauri::generate_context!())
         .expect("error while running Scribe4me");
 }

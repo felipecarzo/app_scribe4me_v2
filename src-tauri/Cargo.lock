@@ -3211,6 +3211,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 name = "scribe4me"
 version = "2.0.0"
 dependencies = [
+ "log",
  "serde",
  "serde_json",
  "tauri",
@@ -3218,6 +3219,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-notification",
  "tauri-plugin-shell",
+ "tokio",
 ]
 
 [[package]]

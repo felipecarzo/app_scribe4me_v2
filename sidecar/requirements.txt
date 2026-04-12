@@ -1,11 +1,10 @@
 # Scribe4me Sidecar — dependencias Python
-# Igual ao v1, sem libs de UI (tkinter/customtkinter removidos)
+# Sem libs de UI (tkinter/customtkinter/pystray/pynput removidos)
 
 faster-whisper>=1.0.0
 sounddevice>=0.4.6
 numpy>=1.24.0
-pynput>=1.7.6
-Pillow>=10.0.0
 httpx>=0.27.0
 websocket-client>=1.8.0
 soundfile>=0.12.1
+pyperclip>=1.8.0

@@ -1,101 +1,121 @@
 /**
- * Protocolo de comunicacao com o sidecar Python via JSON-RPC sobre stdin/stdout.
+ * Protocolo de comunicacao com o sidecar Python via JSON-RPC.
  *
  * O sidecar Python e lancado pelo Tauri como processo filho.
- * Comunicacao: JSON lines (uma mensagem JSON por linha).
- *
- * Mensagem de request:  { "id": 1, "method": "transcribe", "params": {...} }
- * Mensagem de response: { "id": 1, "result": {...} }
- * Mensagem de evento:   { "event": "status_change", "data": {...} }
+ * Requests: frontend -> Tauri command -> stdin do sidecar.
+ * Responses: stdout do sidecar -> Tauri -> frontend.
+ * Events: stdout do sidecar -> Tauri emit -> frontend listen.
  */
 
+import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { appState, type AppStatus } from "./store.svelte";
 
 type MessageHandler = (data: unknown) => void;
 
 class SidecarBridge {
   private handlers = new Map<string, MessageHandler[]>();
-  private nextId = 1;
-  private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+  private unlisten: UnlistenFn | null = null;
 
   async init() {
-    // In dev mode, we'll use a WebSocket to communicate with the Python sidecar
-    // In production, Tauri's shell plugin spawns the sidecar and we use stdin/stdout
     console.log("[sidecar] Initializing bridge...");
     appState.sidecarConnected = false;
     appState.status = "loading";
     appState.statusText = "Conectando ao backend...";
 
-    // TODO: Fase 2 — conectar ao sidecar real
-    // Por enquanto, simula conexao para desenvolvimento da UI
-    setTimeout(() => {
+    // Listen for sidecar events forwarded by Tauri
+    this.unlisten = await listen<{ event: string; data: Record<string, unknown> }>(
+      "sidecar-event",
+      (ev) => {
+        this.handleEvent(ev.payload.event, ev.payload.data);
+      }
+    );
+
+    // Ping the sidecar to verify connection
+    try {
+      await this.send("ping");
       appState.sidecarConnected = true;
-      appState.status = "idle";
-      appState.statusText = "Pronto";
-      console.log("[sidecar] Mock connection established");
-    }, 1500);
+      console.log("[sidecar] Connected");
+    } catch (e) {
+      console.error("[sidecar] Failed to connect:", e);
+      appState.status = "error";
+      appState.statusText = "Backend nao disponivel";
+    }
   }
 
   destroy() {
+    if (this.unlisten) {
+      this.unlisten();
+      this.unlisten = null;
+    }
     appState.sidecarConnected = false;
     this.handlers.clear();
-    this.pending.clear();
   }
 
-  send(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
-    const id = this.nextId++;
-    const msg = { id, method, params };
-    console.log("[sidecar] ->", msg);
-
-    return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-
-      // TODO: Fase 2 — enviar via Tauri shell plugin
-      // Por enquanto, resolve imediatamente para dev
-      setTimeout(() => {
-        this.pending.delete(id);
-        resolve({ ok: true });
-      }, 100);
-    });
+  /** Send a JSON-RPC request to the sidecar via Tauri command. */
+  async send(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+    console.log("[sidecar] ->", method, params);
+    const result = await invoke("sidecar_send", { method, params });
+    console.log("[sidecar] <-", method, result);
+    return result;
   }
 
+  /** Register a handler for a sidecar event. */
   on(event: string, handler: MessageHandler) {
     const list = this.handlers.get(event) ?? [];
     list.push(handler);
     this.handlers.set(event, list);
   }
 
-  /** Processa mensagem recebida do sidecar */
-  handleMessage(raw: string) {
-    try {
-      const msg = JSON.parse(raw);
+  // --- Typed API methods ---
 
-      // Response to a request
-      if ("id" in msg && this.pending.has(msg.id)) {
-        const { resolve, reject } = this.pending.get(msg.id)!;
-        this.pending.delete(msg.id);
-        if (msg.error) reject(new Error(msg.error));
-        else resolve(msg.result);
-        return;
-      }
+  async getConfig(): Promise<Record<string, unknown>> {
+    return (await this.send("get_config")) as Record<string, unknown>;
+  }
 
-      // Event from sidecar
-      if ("event" in msg) {
-        const handlers = this.handlers.get(msg.event) ?? [];
-        for (const h of handlers) h(msg.data);
+  async saveConfig(data: Record<string, unknown>): Promise<void> {
+    await this.send("save_config", data);
+  }
 
-        // Handle built-in events
-        if (msg.event === "status_change") {
-          appState.status = msg.data.status as AppStatus;
-          appState.statusText = msg.data.text ?? "";
-        } else if (msg.event === "realtime_text") {
-          appState.realtimeText = msg.data.text ?? "";
-        } else if (msg.event === "transcription_done") {
-          appState.lastTranscription = msg.data.text ?? "";
-        }
-      }
-    } catch (e) {
-      console.error("[sidecar] Failed to parse message:", raw, e);
+  async getHardware(): Promise<Record<string, unknown>> {
+    return (await this.send("get_hardware")) as Record<string, unknown>;
+  }
+
+  async loadModel(model: string): Promise<void> {
+    await this.send("load_model", { model });
+  }
+
+  async startRecording(): Promise<void> {
+    await this.send("start_recording");
+  }
+
+  async stopRecording(): Promise<Record<string, unknown>> {
+    return (await this.send("stop_recording")) as Record<string, unknown>;
+  }
+
+  async cancelRecording(): Promise<void> {
+    await this.send("cancel_recording");
+  }
+
+  async copyToClipboard(text: string): Promise<void> {
+    await this.send("copy_to_clipboard", { text });
+  }
+
+  // --- Internal event handling ---
+
+  private handleEvent(eventName: string, data: Record<string, unknown>) {
+    // Dispatch to registered handlers
+    const handlers = this.handlers.get(eventName) ?? [];
+    for (const h of handlers) h(data);
+
+    // Handle built-in events
+    if (eventName === "status_change") {
+      appState.status = (data.status as AppStatus) ?? "idle";
+      appState.statusText = (data.text as string) ?? "";
+    } else if (eventName === "realtime_text") {
+      appState.realtimeText = (data.text as string) ?? "";
+    } else if (eventName === "paste_ready") {
+      appState.lastTranscription = (data.text as string) ?? "";
     }
   }
 }

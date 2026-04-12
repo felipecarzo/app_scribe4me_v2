@@ -24,17 +24,17 @@
 
 | ID | Task | Status | Notas |
 |----|------|--------|-------|
-| T2-01 | Migrar config.py do v1 para sidecar | PLANEJADO | JSON config, hotkeys, API keys |
-| T2-02 | Migrar hardware.py do v1 | PLANEJADO | Deteccao CUDA/GPU/RAM |
-| T2-03 | Migrar recorder.py do v1 | PLANEJADO | sounddevice gravacao |
-| T2-04 | Migrar transcriber.py (Whisper local) | PLANEJADO | faster-whisper |
-| T2-05 | Migrar transcriber_api.py (backends) | PLANEJADO | OpenAI/Groq/Gemini/Deepgram |
-| T2-06 | Migrar realtime_manager.py (Deepgram WS) | PLANEJADO | WebSocket streaming |
-| T2-07 | Migrar clipboard.py (output handler) | PLANEJADO | Cursor injection + clipboard |
-| T2-08 | Migrar postprocess.py | PLANEJADO | Text cleanup |
-| T2-09 | Integrar sidecar spawn no Tauri (Rust) | PLANEJADO | Shell plugin + process management |
-| T2-10 | Bridge completa TS <-> Python | PLANEJADO | Todos os metodos implementados |
-| T2-11 | Testes de integracao sidecar | PLANEJADO | Ping, config, transcribe mock |
+| T2-01 | Migrar config.py do v1 para sidecar | CONCLUIDO | Cross-platform config dir, atomic write, thread-safe |
+| T2-02 | Migrar hardware.py do v1 | CONCLUIDO | Inline _get_ram_mb(), recommend_model respeita large-v3 para PT |
+| T2-03 | Migrar recorder.py do v1 | CONCLUIDO | Constructor args (sem Config obj), chunk_callback |
+| T2-04 | Migrar transcriber.py (Whisper local) | CONCLUIDO | Constructor args, CUDA fallback, thread-safe |
+| T2-05 | Migrar transcriber_api.py (backends) | CONCLUIDO | OpenAI/Groq/Gemini/Deepgram, Gemini language-aware |
+| T2-06 | Migrar realtime_manager.py (Deepgram WS) | CONCLUIDO | WebSocket streaming, JSON-RPC events |
+| T2-07 | Migrar clipboard.py (output handler) | CONCLUIDO | pyperclip only, paste simulation -> Rust side |
+| T2-08 | Migrar postprocess.py | CONCLUIDO | Verbatim copy, 20 unit tests |
+| T2-09 | Integrar sidecar spawn no Tauri (Rust) | CONCLUIDO | SidecarManager, stdin/stdout bridge, event forwarding |
+| T2-10 | Bridge completa TS <-> Python | CONCLUIDO | Tauri invoke + listen, typed API methods |
+| T2-11 | Testes de integracao sidecar | CONCLUIDO | 10 integration tests + 20 unit tests, all green |
 
 ---
 
@@ -103,4 +103,4 @@
 
 ---
 
-_Ultima atualizacao: 2026-04-12 — Sprint 1 concluida (9/9)_
+_Ultima atualizacao: 2026-04-12 — Sprint 2 concluida (11/11)_
