@@ -14,9 +14,9 @@
 | T1-04 | Settings UI Svelte (4 abas) | CONCLUIDO | Geral, Atalhos, Prompt, API |
 | T1-05 | Store reativo (Svelte 5 runes) | CONCLUIDO | appState com status/backend/model |
 | T1-06 | Sidecar bridge TypeScript | CONCLUIDO | sidecar.ts com send/on/handleMessage |
-| T1-07 | npm install + cargo check + verificar build | PENDENTE | Validar que tudo compila |
-| T1-08 | Git init + commit inicial + push | PENDENTE | Repo GitHub |
-| T1-09 | CLAUDE.md + governanca do projeto | PENDENTE | Regras, agentes, pipeline |
+| T1-07 | npm install + cargo check + verificar build | CONCLUIDO | npm 0 vulns, cargo 3 warnings dead_code (esperado) |
+| T1-08 | Git init + commit inicial + push | EM ANDAMENTO | Repo GitHub |
+| T1-09 | CLAUDE.md + governanca do projeto | CONCLUIDO | CLAUDE.md + .gitignore atualizado |
 
 ---
 
