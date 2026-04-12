@@ -121,6 +121,21 @@ def save_api_config(cfg: dict) -> None:
     _save_config_data(data)
 
 
+def is_first_run() -> bool:
+    """Retorna True se o config.json nao existe ou tem first_run=True."""
+    data = _load_config_data()
+    if not data:
+        return True
+    return bool(data.get("first_run", False))
+
+
+def mark_first_run_done() -> None:
+    """Marca first_run como False no config.json."""
+    data = _load_config_data()
+    data["first_run"] = False
+    _save_config_data(data)
+
+
 @dataclass
 class Config:
     """Config runtime do sidecar — sem hotkeys (gerenciados pelo Tauri)."""

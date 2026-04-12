@@ -20,6 +20,7 @@ export type AppStatus =
 
 export type Backend = "local" | "openai" | "groq" | "gemini" | "deepgram";
 export type OutputMode = "cursor" | "clipboard";
+export type Theme = "dark" | "light" | "system";
 
 interface AppState {
   status: AppStatus;
@@ -31,6 +32,8 @@ interface AppState {
   realtimeText: string;
   lastTranscription: string;
   sidecarConnected: boolean;
+  theme: Theme;
+  firstRun: boolean;
 }
 
 export const appState: AppState = $state({
@@ -43,4 +46,6 @@ export const appState: AppState = $state({
   realtimeText: "",
   lastTranscription: "",
   sidecarConnected: false,
+  theme: "system",
+  firstRun: false,
 });

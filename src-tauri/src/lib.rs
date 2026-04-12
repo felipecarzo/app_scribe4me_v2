@@ -52,6 +52,18 @@ fn update_tray_info(
     }
 }
 
+/// Re-register global shortcuts with new key combinations.
+#[tauri::command]
+fn update_shortcuts(
+    ptt: String,
+    toggle: String,
+    cancel: String,
+    quit: String,
+    app: AppHandle,
+) -> Result<(), String> {
+    hotkeys::reregister_shortcuts(&app, &ptt, &toggle, &cancel, &quit)
+}
+
 // --- App setup ---
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -174,7 +186,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_app_version, sidecar_send, update_tray_info])
+        .invoke_handler(tauri::generate_handler![get_app_version, sidecar_send, update_tray_info, update_shortcuts])
         .run(tauri::generate_context!())
         .expect("error while running Scribe4me");
 }

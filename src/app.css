@@ -1,7 +1,11 @@
 @import "tailwindcss";
 
-/* Scribe4me Design Tokens */
-:root {
+/* ──────────────────────────────────────────────
+   Scribe4me Design Tokens
+   ────────────────────────────────────────────── */
+
+:root,
+[data-theme="dark"] {
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
   --bg-tertiary: #334155;
@@ -13,8 +17,41 @@
   --accent-amber: #f59e0b;
   --accent-red: #ef4444;
   --border: #334155;
-  --radius: 12px;
+
+  /* Spacing / shape */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Transitions */
+  --transition-fast: 120ms ease;
+  --transition-med: 220ms ease;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
+
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-tertiary: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #94a3b8;
+  --accent-blue: #2563eb;
+  --accent-green: #059669;
+  --accent-amber: #d97706;
+  --accent-red: #dc2626;
+  --border: #cbd5e1;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* ──────────────────────────────────────────────
+   Base styles
+   ────────────────────────────────────────────── */
 
 html,
 body {
@@ -26,9 +63,32 @@ body {
   -webkit-font-smoothing: antialiased;
   user-select: none;
   overflow: hidden;
+  transition: background-color var(--transition-med), color var(--transition-med);
 }
 
 /* Tauri drag region */
 [data-tauri-drag-region] {
   cursor: move;
+}
+
+/* ──────────────────────────────────────────────
+   Animations
+   ────────────────────────────────────────────── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.animate-spin-sm {
+  animation: spin 0.8s linear infinite;
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
 }

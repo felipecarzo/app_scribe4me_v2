@@ -48,6 +48,8 @@ class SidecarBridge {
       appState.model = (config.model as string) ?? "large-v3";
       appState.outputMode = (config.output_mode as typeof appState.outputMode) ?? "cursor";
       appState.realtimeEnabled = (config.realtime as boolean) ?? false;
+      appState.theme = (config.theme as typeof appState.theme) ?? "system";
+      appState.firstRun = (config.first_run as boolean) ?? false;
 
       // Update tray menu with real config
       this.updateTrayInfo(appState.backend, appState.model);
@@ -114,6 +116,10 @@ class SidecarBridge {
 
   async copyToClipboard(text: string): Promise<void> {
     await this.send("copy_to_clipboard", { text });
+  }
+
+  async testApiKey(provider: string, key: string): Promise<{ ok: boolean; latency_ms?: number; error?: string }> {
+    return (await this.send("test_api_key", { provider, key })) as { ok: boolean; latency_ms?: number; error?: string };
   }
 
   /** Update tray menu labels for backend and model. */

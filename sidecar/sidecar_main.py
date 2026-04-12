@@ -12,21 +12,28 @@ import json
 import logging
 import sys
 import threading
+import time
+import urllib.error
+import urllib.request
 from typing import Any
 
 from config import (
     SUPPORTED_API_BACKENDS,
     Config,
+    is_first_run,
     load_api_config,
     load_api_keys,
     load_custom_prompt,
     load_hotkeys,
     load_output_mode,
+    mark_first_run_done,
     save_api_config,
     save_api_keys,
     save_custom_prompt,
     save_hotkeys,
     save_output_mode,
+    _load_config_data,
+    _save_config_data,
 )
 from clipboard import OutputHandler
 from hardware import detect_hardware, recommend_model
@@ -82,6 +89,7 @@ def _handle_ping(req_id: int, params: dict) -> None:
 
 def _handle_get_config(req_id: int, params: dict) -> None:
     api_cfg = load_api_config()
+    raw = _load_config_data()
     send_response(req_id, {
         "backend": api_cfg["backend"],
         "model": _config.model if _config else "large-v3",
@@ -91,6 +99,8 @@ def _handle_get_config(req_id: int, params: dict) -> None:
         "hotkeys": load_hotkeys(),
         "api_keys": load_api_keys(),
         "custom_prompt": load_custom_prompt(),
+        "theme": raw.get("theme", "system"),
+        "first_run": is_first_run(),
     })
 
 
@@ -133,6 +143,12 @@ def _handle_save_config_inner(params: dict) -> None:
         _config.model = params["model"]
     if "language" in params and _config:
         _config.language = params["language"]
+    if "theme" in params:
+        data = _load_config_data()
+        data["theme"] = params["theme"]
+        _save_config_data(data)
+    if params.get("first_run") is False:
+        mark_first_run_done()
 
 
 def _handle_get_hardware(req_id: int, params: dict) -> None:
@@ -306,6 +322,57 @@ def _handle_copy_to_clipboard(req_id: int, params: dict) -> None:
     send_response(req_id, {"ok": True})
 
 
+# Validation endpoints per provider (minimal request to confirm key works)
+_API_TEST_ENDPOINTS: dict[str, tuple[str, str, str]] = {
+    # provider: (url, header_name, header_value_template)
+    "openai":   ("https://api.openai.com/v1/models",         "Authorization", "Bearer {key}"),
+    "groq":     ("https://api.groq.com/openai/v1/models",    "Authorization", "Bearer {key}"),
+    "deepgram": ("https://api.deepgram.com/v1/projects",     "Authorization", "Token {key}"),
+    "gemini":   ("https://generativelanguage.googleapis.com/v1beta/models?key={key}", "", ""),
+}
+
+
+def _handle_test_api_key(req_id: int, params: dict) -> None:
+    """Valida uma API key fazendo uma requisicao minima ao provider (em thread)."""
+    provider = params.get("provider", "")
+    key = params.get("key", "")
+
+    def _do_test():
+        if provider not in _API_TEST_ENDPOINTS or not key:
+            send_response(req_id, error="Provider desconhecido ou chave vazia")
+            return
+
+        url_tpl, header_name, header_val_tpl = _API_TEST_ENDPOINTS[provider]
+        url = url_tpl.replace("{key}", key)
+        header_val = header_val_tpl.replace("{key}", key)
+
+        req = urllib.request.Request(url)
+        req.add_header("User-Agent", "Scribe4me/2.0")
+        if header_name:
+            req.add_header(header_name, header_val)
+
+        try:
+            # NOTE: nao logar `url` — Gemini embute a key no query string
+            t0 = time.monotonic()
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                latency_ms = int((time.monotonic() - t0) * 1000)
+                # Any 2xx means key is valid
+                if resp.status < 300:
+                    send_response(req_id, {"ok": True, "latency_ms": latency_ms})
+                else:
+                    send_response(req_id, error=f"HTTP {resp.status}")
+        except urllib.error.HTTPError as e:
+            # 401/403 = invalid key; 429 = valid key but rate-limited
+            if e.code == 429:
+                send_response(req_id, {"ok": True, "latency_ms": 0})
+            else:
+                send_response(req_id, error=f"Chave invalida (HTTP {e.code})")
+        except Exception as e:
+            send_response(req_id, error=str(e))
+
+    _run_in_thread(_do_test)
+
+
 # --- Dispatch table ---
 
 _HANDLERS = {
@@ -318,6 +385,7 @@ _HANDLERS = {
     "stop_recording": _handle_stop_recording,
     "cancel_recording": _handle_cancel_recording,
     "copy_to_clipboard": _handle_copy_to_clipboard,
+    "test_api_key": _handle_test_api_key,
 }
 
 

@@ -5,6 +5,21 @@
     <link rel="icon" type="image/png" href="/scribe4me.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Scribe4me</title>
+    <!-- Anti-FOWT: apply saved theme before first paint -->
+    <script>
+      try {
+        var cached = JSON.parse(localStorage.getItem("scribe-theme") || "{}");
+        var theme = cached.theme;
+        if (theme === "light") {
+          document.documentElement.setAttribute("data-theme", "light");
+        } else if (theme === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        } else {
+          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="app"></div>

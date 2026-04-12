@@ -33,12 +33,20 @@ class SidecarProcess:
         self._reader_thread = threading.Thread(target=self._read_stdout, daemon=True)
         self._reader_thread.start()
 
-        # Consume initial events (status_change loading + idle)
-        self._startup_events = []
-        for _ in range(2):
-            line = self._read_line()
+        # Consume initial events — read for up to 6 seconds to capture loading + idle
+        self._startup_events: list[dict] = []
+        deadline = time.time() + 6.0
+        while time.time() < deadline:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+            line = self._read_line(timeout=min(remaining, 2.0))
             if line:
                 self._startup_events.append(json.loads(line))
+                # Stop once we have both loading and idle
+                statuses = [e["data"].get("status") for e in self._startup_events if e.get("event") == "status_change"]
+                if "idle" in statuses:
+                    break
 
     def _read_stdout(self):
         """Background thread that reads lines from stdout."""
