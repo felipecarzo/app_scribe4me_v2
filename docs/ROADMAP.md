@@ -15,7 +15,7 @@
 | T1-05 | Store reativo (Svelte 5 runes) | CONCLUIDO | appState com status/backend/model |
 | T1-06 | Sidecar bridge TypeScript | CONCLUIDO | sidecar.ts com send/on/handleMessage |
 | T1-07 | npm install + cargo check + verificar build | CONCLUIDO | npm 0 vulns, cargo 3 warnings dead_code (esperado) |
-| T1-08 | Git init + commit inicial + push | EM ANDAMENTO | Repo GitHub |
+| T1-08 | Git init + commit inicial + push | CONCLUIDO | 218efb9, pushed to origin/main |
 | T1-09 | CLAUDE.md + governanca do projeto | CONCLUIDO | CLAUDE.md + .gitignore atualizado |
 
 ---
@@ -103,4 +103,4 @@
 
 ---
 
-_Ultima atualizacao: 2026-04-12 — scaffold inicial_
+_Ultima atualizacao: 2026-04-12 — Sprint 1 concluida (9/9)_
