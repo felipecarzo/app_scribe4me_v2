@@ -171,6 +171,7 @@ def _handle_load_model(req_id: int, params: dict) -> None:
     def _do_load():
         global _transcriber
         send_event("status_change", {"status": "loading", "text": f"Carregando {model_name}..."})
+        load_t0 = time.monotonic()
         try:
             with _state_lock:
                 if _transcriber is None:
@@ -184,8 +185,10 @@ def _handle_load_model(req_id: int, params: dict) -> None:
                 else:
                     _transcriber.load_model()
                     _transcriber.warm_up()
+            load_ms = int((time.monotonic() - load_t0) * 1000)
+            logger.info("Model '%s' loaded in %d ms (device=%s)", model_name, load_ms, _transcriber.device)
             send_event("status_change", {"status": "idle", "text": "Pronto"})
-            send_response(req_id, {"ok": True, "device": _transcriber.device})
+            send_response(req_id, {"ok": True, "device": _transcriber.device, "load_ms": load_ms})
         except Exception as e:
             logger.exception("Erro ao carregar modelo")
             send_event("status_change", {"status": "error", "text": str(e)})
@@ -406,6 +409,8 @@ def main() -> None:
     """Loop principal — le JSON lines de stdin e despacha."""
     global _config, _output
 
+    _startup_t0 = time.monotonic()
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
@@ -422,6 +427,9 @@ def main() -> None:
         "Config: backend=%s, model=%s, device=%s, output=%s",
         _config.api_backend, _config.model, _config.device, _config.output_mode,
     )
+
+    startup_ms = int((time.monotonic() - _startup_t0) * 1000)
+    logger.info("Sidecar ready in %d ms", startup_ms)
 
     send_event("status_change", {"status": "idle", "text": "Pronto"})
 
