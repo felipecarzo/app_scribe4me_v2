@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicovank/tauri/refs/heads/v2-docs/crates/tauri-cli/schema.json",
+  "productName": "Scribe4me",
+  "version": "2.0.0",
+  "identifier": "com.scribe4me.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Scribe4me",
+        "width": 480,
+        "height": 580,
+        "resizable": false,
+        "center": true,
+        "decorations": false,
+        "transparent": true,
+        "visible": false
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/tray-idle.png",
+      "iconAsTemplate": true,
+      "tooltip": "Scribe4me — Speech-to-text"
+    },
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    },
+    "global-shortcut": {
+      "all": true
+    },
+    "notification": {
+      "all": true
+    }
+  }
+}
