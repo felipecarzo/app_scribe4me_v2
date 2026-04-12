@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { appState, type Backend, type OutputMode } from "./store.svelte";
   import { sidecar } from "./sidecar";
 
-  let activeTab = $state<"geral" | "atalhos" | "prompt" | "api">("geral");
+  let activeTab = $state<"geral" | "prompt" | "api">("geral");
   let customPrompt = $state("");
   let apiKeys = $state<Record<string, string>>({
     openai: "",
@@ -11,9 +12,16 @@
     deepgram: "",
   });
 
+  // Load config from sidecar on mount (onMount avoids $effect dependency loops)
+  onMount(() => {
+    sidecar.getConfig().then((config) => {
+      if (config.custom_prompt) customPrompt = config.custom_prompt as string;
+      if (config.api_keys) apiKeys = { ...apiKeys, ...(config.api_keys as Record<string, string>) };
+    }).catch(() => {});
+  });
+
   const tabs = [
     { id: "geral" as const, label: "Geral" },
-    { id: "atalhos" as const, label: "Atalhos" },
     { id: "prompt" as const, label: "Prompt" },
     { id: "api" as const, label: "API" },
   ];
@@ -34,8 +42,8 @@
     { value: "large-v3", label: "Large-v3 (3GB) — maximo de qualidade" },
   ];
 
-  function handleSave() {
-    sidecar.send("save_config", {
+  async function handleSave() {
+    await sidecar.saveConfig({
       backend: appState.backend,
       output_mode: appState.outputMode,
       model: appState.model,
@@ -43,6 +51,8 @@
       custom_prompt: customPrompt,
       api_keys: apiKeys,
     });
+    // Update tray menu labels
+    sidecar.updateTrayInfo(appState.backend, appState.model);
   }
 </script>
 
@@ -118,16 +128,6 @@
             </label>
           {/each}
         </fieldset>
-      </div>
-
-    {:else if activeTab === "atalhos"}
-      <div class="space-y-4">
-        <p class="text-sm text-[var(--text-muted)]">
-          Clique no botao e pressione a nova combinacao de teclas.
-        </p>
-        <p class="text-xs text-[var(--text-muted)]">
-          (Captura de hotkeys sera implementada na Fase 4)
-        </p>
       </div>
 
     {:else if activeTab === "prompt"}

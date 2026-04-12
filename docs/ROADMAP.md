@@ -42,12 +42,12 @@
 
 | ID | Task | Status | Notas |
 |----|------|--------|-------|
-| T3-01 | Global shortcuts via Tauri plugin | PLANEJADO | PTT, Toggle, Cancel, Quit |
-| T3-02 | Tray icon estados (5 cores/animacoes) | PLANEJADO | idle/loading/recording/transcribing/done |
-| T3-03 | Tray menu dinamico (backend, modelo) | PLANEJADO | Atualiza labels com estado atual |
-| T3-04 | Notificacoes nativas | PLANEJADO | Via Tauri notification plugin |
-| T3-05 | Hotkey capture UI (Svelte) | PLANEJADO | Captura de atalhos customizados |
-| T3-06 | Sincronizacao estado Tray <-> UI <-> Sidecar | PLANEJADO | Eventos bidirecionais |
+| T3-01 | Global shortcuts via Tauri plugin | CONCLUIDO | PTT (press/release), Toggle, Cancel, Quit via AtomicBool state |
+| T3-02 | Tray icon estados (5 cores) | CONCLUIDO | 6 PNGs include_bytes!, idle/loading/recording/transcribing/done/error |
+| T3-03 | Tray menu dinamico (backend, modelo) | CONCLUIDO | TrayMenuItems managed state, update_tray_info command |
+| T3-04 | Notificacoes nativas | CONCLUIDO | tauri-plugin-notification, permission check, error/done/paste events |
+| T3-05 | Settings UI (config sync) | CONCLUIDO | onMount config load, aba atalhos removida (hotkeys hardcoded por ora) |
+| T3-06 | Sincronizacao estado Tray <-> UI <-> Sidecar | CONCLUIDO | sidecar event -> update_tray_icon -> set_recording -> menu/hotkey sync |
 
 ---
 
@@ -103,4 +103,4 @@
 
 ---
 
-_Ultima atualizacao: 2026-04-12 — Sprint 2 concluida (11/11)_
+_Ultima atualizacao: 2026-04-12 — Sprint 3 concluida (6/6)_

@@ -9,6 +9,11 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 import { appState, type AppStatus } from "./store.svelte";
 
 type MessageHandler = (data: unknown) => void;
@@ -31,11 +36,21 @@ class SidecarBridge {
       }
     );
 
-    // Ping the sidecar to verify connection
+    // Ping the sidecar to verify connection, then load config
     try {
       await this.send("ping");
       appState.sidecarConnected = true;
       console.log("[sidecar] Connected");
+
+      // Load real config from sidecar and sync appState
+      const config = await this.getConfig();
+      appState.backend = (config.backend as typeof appState.backend) ?? "local";
+      appState.model = (config.model as string) ?? "large-v3";
+      appState.outputMode = (config.output_mode as typeof appState.outputMode) ?? "cursor";
+      appState.realtimeEnabled = (config.realtime as boolean) ?? false;
+
+      // Update tray menu with real config
+      this.updateTrayInfo(appState.backend, appState.model);
     } catch (e) {
       console.error("[sidecar] Failed to connect:", e);
       appState.status = "error";
@@ -101,6 +116,11 @@ class SidecarBridge {
     await this.send("copy_to_clipboard", { text });
   }
 
+  /** Update tray menu labels for backend and model. */
+  async updateTrayInfo(backend: string, model: string): Promise<void> {
+    await invoke("update_tray_info", { backend, model });
+  }
+
   // --- Internal event handling ---
 
   private handleEvent(eventName: string, data: Record<string, unknown>) {
@@ -110,12 +130,37 @@ class SidecarBridge {
 
     // Handle built-in events
     if (eventName === "status_change") {
+      const prevStatus = appState.status;
       appState.status = (data.status as AppStatus) ?? "idle";
       appState.statusText = (data.text as string) ?? "";
+
+      // Native notifications for key transitions
+      if (appState.status === "error") {
+        this.notify("Erro", (data.text as string) ?? "Erro na transcricao");
+      } else if (prevStatus === "transcribing" && appState.status === "idle") {
+        this.notify("Transcricao concluida", "Texto copiado para o clipboard");
+      }
     } else if (eventName === "realtime_text") {
       appState.realtimeText = (data.text as string) ?? "";
     } else if (eventName === "paste_ready") {
       appState.lastTranscription = (data.text as string) ?? "";
+      this.notify("Texto pronto", "Colado na posicao do cursor");
+    }
+  }
+
+  /** Send a native OS notification. */
+  private async notify(title: string, body: string) {
+    try {
+      let granted = await isPermissionGranted();
+      if (!granted) {
+        const permission = await requestPermission();
+        granted = permission === "granted";
+      }
+      if (granted) {
+        sendNotification({ title, body });
+      }
+    } catch {
+      // Notifications not available (e.g., dev mode without plugin)
     }
   }
 }
