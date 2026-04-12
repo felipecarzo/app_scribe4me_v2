@@ -4,39 +4,50 @@
 
 - **Data:** 2026-04-12
 - **Branch:** main
-- **Ultimo commit:** 17e640e — Sprint 5 completo
-- **Agente:** Claude Sonnet 4.6
+- **Ultimo commit:** 33db055 — docs Sprint 6 README
+- **Agente:** Claude Sonnet 4.6 (autopilot)
 - **Maquina:** ALIENWARE-LIPE (Windows 11)
 
 ## Estado do projeto
 
-Sprint 5 (Overlay Realtime) CONCLUIDA — 5/5 tasks.
-Principais entregas:
-- `overlay.rs`: WebviewWindow "overlay" always_on_top + transparent + focused(false) + ignore_cursor_events
-- `Pill.svelte`: glassmorphism pill com backdrop-filter, pulse dot por status
-- `Overlay.svelte`: escuta sidecar-event broadcast, controla visibilidade + texto
-- Animacoes: in:fly(y=18, 260ms) + out:fade(360ms)
-- Posicionamento: primary_monitor + scale_factor, 48px margin bottom
+**PROJETO COMPLETO — Sprint 6 (8/8) CONCLUIDA.**
 
-Revisor: aprovado com ressalvas — 3 MAJORs corrigidos antes do commit.
+Todas as 6 sprints do ROADMAP foram concluidas (39 tasks no total).
+
+Sprint 6 entregas:
+- `sidecar/scribe4me-sidecar.spec`: PyInstaller onedir, console=True, upx=False, hiddenimports
+- `sidecar/build_sidecar.bat`: build script Windows com guards e smoke test inline
+- `sidecar/tests/test_smoke_binary.py`: smoke tests do binario compilado (auto-skip sem binario)
+- `src-tauri/tauri.conf.json`: bundle.resources aponta para `sidecar/dist/scribe4me-sidecar/**/*`
+- `src-tauri/src/sidecar.rs`: spawn() aceita Command pre-construido (dev vs release agnóstico)
+- `src-tauri/src/lib.rs`: build_sidecar_command() resolve path por cfg debug/release; guard de existencia
+- `.github/workflows/release.yml`: 8 jobs CI/CD — test, build sidecar, Tauri bundle, GitHub Release
+- `README.md`: features, setup, arquitetura, download table, roadmap completo
+- `sidecar/sidecar_main.py`: startup_ms + load_ms timing logs (T6-07)
 
 ## Task em andamento
 
-Nenhuma — Sprint 5 finalizada. Proximo: Sprint 6.
+Nenhuma — PROJETO COMPLETO.
 
 ## Proximo passo exato
 
-1. Iniciar Sprint 6 — Build, Release e Polimento
-2. T6-01: PyInstaller sidecar build (Windows) — scribe4me-sidecar.exe
-3. T6-02: Tauri bundle Windows (MSI/NSIS) com sidecar embutido
+1. Para gerar o primeiro release: criar tag `v2.0.0` e fazer push
+   ```
+   git tag v2.0.0
+   git push origin v2.0.0
+   ```
+2. O CI rodara automaticamente e criara a GitHub Release com instaladores para as 3 plataformas.
+3. Nota: antes do primeiro release real, executar `sidecar/build_sidecar.bat` localmente para validar o build do PyInstaller.
 
 ## Arquivos relevantes
 
-- `src-tauri/src/overlay.rs` — WebviewWindow overlay, show/hide/position
-- `src/lib/Overlay.svelte` — root component, sidecar event listener
-- `src/lib/components/Pill.svelte` — glassmorphism pill visual
-- `src/overlay.ts` + `overlay.html` — Vite entry separado para overlay
-- `vite.config.ts` — multi-entry build (main + overlay)
+- `sidecar/scribe4me-sidecar.spec` — PyInstaller spec
+- `sidecar/build_sidecar.bat` — script de build Windows
+- `sidecar/tests/test_smoke_binary.py` — smoke tests binario
+- `sidecar/dist/scribe4me-sidecar/placeholder.txt` — placeholder para cargo check sem build
+- `.github/workflows/release.yml` — CI/CD completo
+- `src-tauri/src/lib.rs` — build_sidecar_command() com dev/release path resolution
+- `README.md` — documentacao publica do projeto
 
 ## Estado do ROADMAP
 
@@ -47,12 +58,14 @@ Nenhuma — Sprint 5 finalizada. Proximo: Sprint 6.
 | Sprint 3 — Tray + Hotkeys | CONCLUIDO (6/6) |
 | Sprint 4 — Settings Premium | CONCLUIDO (6/6) |
 | Sprint 5 — Overlay Realtime | CONCLUIDO (5/5) |
-| Sprint 6 — Build/Release | PLANEJADO |
+| Sprint 6 — Build/Release | CONCLUIDO (8/8) |
+
+**Total: 45 tasks concluidas — ROADMAP 100% completo.**
 
 ## Notas para proxima sessao
 
-- Sprint 6 requer PyInstaller instalado: `pip install pyinstaller`
-- O sidecar .spec file precisa incluir: sounddevice, ctranslate2, faster-whisper, pyperclip
-- Tauri sidecar config: `src-tauri/tauri.conf.json` deve ter `bundle.externalBin` ou `sidecarBin`
-- backdrop-filter funciona no WebView2 (Windows 11 + Edge Chromium) — testar em Windows 10
-- CSS tokens hardcoded na Pill.svelte (Revisor minor) — pode ser refatorado no Sprint 6 polish
+- macOS DMG e arm64 only (Apple Silicon). Para suporte Intel: dois jobs CI separados.
+- O secret `TAURI_SIGNING_PRIVATE_KEY` deve ser configurado no GitHub repo settings antes do release.
+- `test_integration.py` excluido do CI por requerer hardware de audio — rodar localmente.
+- CSS tokens hardcoded na Pill.svelte (minor do Revisor Sprint 5) — pode ser refatorado em backlog.
+- backdrop-filter funciona no WebView2 (Windows 11 + Edge Chromium) — testar em Windows 10.

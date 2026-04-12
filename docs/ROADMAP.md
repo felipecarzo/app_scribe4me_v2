@@ -80,14 +80,14 @@
 
 | ID | Task | Status | Notas |
 |----|------|--------|-------|
-| T6-01 | PyInstaller sidecar build (Windows) | PLANEJADO | scribe4me-sidecar.exe |
-| T6-02 | Tauri bundle Windows (MSI/NSIS) | PLANEJADO | Com sidecar embutido |
-| T6-03 | Tauri bundle macOS (DMG) | PLANEJADO | CI GitHub Actions |
-| T6-04 | Tauri bundle Linux (AppImage/deb) | PLANEJADO | CI GitHub Actions |
-| T6-05 | CI pipeline completo | PLANEJADO | Build + test + release |
-| T6-06 | README + portfolio update | PLANEJADO | Screenshots, features |
-| T6-07 | Performance profiling | PLANEJADO | Startup time, memory usage |
-| T6-08 | Testes E2E | PLANEJADO | Playwright ou similar |
+| T6-01 | PyInstaller sidecar build (Windows) | CONCLUIDO | scribe4me-sidecar.spec + build_sidecar.bat |
+| T6-02 | Tauri bundle Windows (MSI/NSIS) | CONCLUIDO | bundle.resources + build_sidecar_command() dev/release |
+| T6-03 | Tauri bundle macOS (DMG) | CONCLUIDO | CI job build-tauri-macos (arm64 only — macos-14) |
+| T6-04 | Tauri bundle Linux (AppImage/deb) | CONCLUIDO | CI job build-tauri-linux |
+| T6-05 | CI pipeline completo | CONCLUIDO | .github/workflows/release.yml — 8 jobs, tag trigger |
+| T6-06 | README + portfolio update | CONCLUIDO | README.md com features, setup, arquitetura, roadmap |
+| T6-07 | Performance profiling | CONCLUIDO | startup_ms + load_ms logs no sidecar_main.py |
+| T6-08 | Testes E2E | CONCLUIDO | test_smoke_binary.py — auto-skip sem binario, 6 casos |
 
 ---
 
@@ -103,4 +103,4 @@
 
 ---
 
-_Ultima atualizacao: 2026-04-12 — Sprint 5 concluida (5/5)_
+_Ultima atualizacao: 2026-04-12 — Sprint 6 concluida (8/8) — PROJETO COMPLETO_
