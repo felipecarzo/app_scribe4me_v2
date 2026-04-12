@@ -68,11 +68,11 @@
 
 | ID | Task | Status | Notas |
 |----|------|--------|-------|
-| T5-01 | Window overlay transparente (Tauri) | PLANEJADO | Decorations false, always on top |
-| T5-02 | Pill/Dynamic Island design (Svelte) | PLANEJADO | Glassmorphism, bordas arredondadas |
-| T5-03 | Texto parcial streaming do sidecar | PLANEJADO | Eventos realtime_text |
-| T5-04 | Animacao de entrada/saida | PLANEJADO | Slide up, fade out |
-| T5-05 | Posicionamento inteligente | PLANEJADO | Bottom center, evitar taskbar |
+| T5-01 | Window overlay transparente (Tauri) | CONCLUIDO | overlay.rs, always_on_top, skip_taskbar, focused(false), ignore_cursor_events |
+| T5-02 | Pill/Dynamic Island design (Svelte) | CONCLUIDO | Pill.svelte glassmorphism, Overlay.svelte, overlay.html Vite entry |
+| T5-03 | Texto parcial streaming do sidecar | CONCLUIDO | listen(sidecar-event), realtime_text → text, clearTimeout guard |
+| T5-04 | Animacao de entrada/saida | CONCLUIDO | in:fly(y=18,260ms) + out:fade(360ms) |
+| T5-05 | Posicionamento inteligente | CONCLUIDO | position_bottom_center com scale_factor, 48px margin |
 
 ---
 
@@ -103,4 +103,4 @@
 
 ---
 
-_Ultima atualizacao: 2026-04-12 — Sprint 4 concluida (6/6)_
+_Ultima atualizacao: 2026-04-12 — Sprint 5 concluida (5/5)_
