@@ -55,12 +55,12 @@
 
 | ID | Task | Status | Notas |
 |----|------|--------|-------|
-| T4-01 | Design system completo (tokens, components) | PLANEJADO | Tailwind + CSS vars |
-| T4-02 | Animacoes e transicoes | PLANEJADO | Tab switch, state changes, micro-interactions |
-| T4-03 | Hotkey capture funcional no Svelte | PLANEJADO | Keyboard listener + display |
-| T4-04 | Validacao de API keys inline | PLANEJADO | Test connection antes de salvar |
-| T4-05 | Dark/Light mode toggle | PLANEJADO | Detectar OS preference |
-| T4-06 | Onboarding first-run | PLANEJADO | Wizard de configuracao inicial |
+| T4-01 | Design system completo (tokens, components) | CONCLUIDO | Button/Input components, radius/transition tokens dark+light |
+| T4-02 | Animacoes e transicoes | CONCLUIDO | Svelte fade entre abas, spinner no save, transition-colors |
+| T4-03 | Hotkey capture funcional no Svelte | CONCLUIDO | HotkeyCapture+shared state, reregister_shortcuts Rust, update_shortcuts command |
+| T4-04 | Validacao de API keys inline | CONCLUIDO | test_api_key RPC (urllib), Input badge, debounce 800ms |
+| T4-05 | Dark/Light mode toggle | CONCLUIDO | [data-theme] tokens, ThemeToggle, anti-FOWT index.html |
+| T4-06 | Onboarding first-run | CONCLUIDO | Wizard 3 passos, is_first_run/mark_done config.py |
 
 ---
 
@@ -103,4 +103,4 @@
 
 ---
 
-_Ultima atualizacao: 2026-04-12 — Sprint 3 concluida (6/6)_
+_Ultima atualizacao: 2026-04-12 — Sprint 4 concluida (6/6)_
