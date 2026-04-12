@@ -15,4 +15,13 @@ export default defineConfig({
       ignored: ["**/src-tauri/**", "**/sidecar/**"],
     },
   },
+
+  build: {
+    rollupOptions: {
+      input: {
+        main: "index.html",
+        overlay: "overlay.html",
+      },
+    },
+  },
 });

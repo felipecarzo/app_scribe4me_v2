@@ -17,6 +17,7 @@ struct TrayMenuItems {
 }
 
 mod hotkeys;
+mod overlay;
 mod sidecar;
 
 use sidecar::SidecarManager;
@@ -157,10 +158,11 @@ pub fn run() {
             // Event callback: forward sidecar events to the frontend + update tray icon
             let sidecar_for_spawn = Arc::clone(&sidecar);
             if let Err(e) = sidecar_for_spawn.spawn(move |event_name, data| {
-                // Update tray icon on status_change
+                // Update tray icon and overlay on status_change
                 if event_name == "status_change" {
                     if let Some(status) = data.get("status").and_then(|v| v.as_str()) {
                         update_tray_icon(&app_handle, status);
+                        overlay::show_or_hide(&app_handle, status);
                     }
                 }
 
