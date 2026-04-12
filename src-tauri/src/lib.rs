@@ -155,9 +155,12 @@ pub fn run() {
             let sidecar = Arc::new(SidecarManager::new());
             let app_handle = app.handle().clone();
 
+            // Resolve sidecar command: dev uses python script, release uses PyInstaller binary
+            let sidecar_cmd = build_sidecar_command(app)?;
+
             // Event callback: forward sidecar events to the frontend + update tray icon
             let sidecar_for_spawn = Arc::clone(&sidecar);
-            if let Err(e) = sidecar_for_spawn.spawn(move |event_name, data| {
+            if let Err(e) = sidecar_for_spawn.spawn(sidecar_cmd, move |event_name, data| {
                 // Update tray icon and overlay on status_change
                 if event_name == "status_change" {
                     if let Some(status) = data.get("status").and_then(|v| v.as_str()) {
@@ -191,6 +194,50 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![get_app_version, sidecar_send, update_tray_info, update_shortcuts])
         .run(tauri::generate_context!())
         .expect("error while running Scribe4me");
+}
+
+/// Constroi o Command para iniciar o sidecar Python.
+///
+/// Em debug (dev mode): executa `python {workspace}/sidecar/sidecar_main.py`
+/// Em release: executa o binario PyInstaller em `{resource_dir}/scribe4me-sidecar/`
+///
+/// IMPORTANTE: em release, o binario deve existir no bundle. Se nao existir,
+/// retorna erro descritivo. Execute `sidecar/build_sidecar.bat` antes de `tauri build`.
+fn build_sidecar_command(app: &tauri::App) -> Result<std::process::Command, Box<dyn std::error::Error>> {
+    #[cfg(debug_assertions)]
+    {
+        let _ = app; // app nao e usado em dev mode
+        // Dev: sidecar Python a partir do current_dir (workspace root)
+        let script = std::env::current_dir()
+            .unwrap_or_default()
+            .join("../sidecar/sidecar_main.py");
+        let mut cmd = std::process::Command::new("python");
+        cmd.arg(script);
+        Ok(cmd)
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        // Release: binario PyInstaller nos resources do bundle Tauri
+        use tauri::Manager;
+        let resource_dir = app.path().resource_dir()?;
+        let exe_name = if cfg!(target_os = "windows") {
+            "scribe4me-sidecar.exe"
+        } else {
+            "scribe4me-sidecar"
+        };
+        let sidecar_exe = resource_dir
+            .join("scribe4me-sidecar")
+            .join(exe_name);
+        // Guard: falha rapido com mensagem clara se o bundle nao inclui o binario.
+        // Causa mais comum: `tauri build` foi executado sem rodar `build_sidecar.bat` antes.
+        if !sidecar_exe.exists() {
+            return Err(format!(
+                "Sidecar binary not found: {}. Run sidecar/build_sidecar.bat before tauri build.",
+                sidecar_exe.display()
+            ).into());
+        }
+        Ok(std::process::Command::new(sidecar_exe))
+    }
 }
 
 /// Update tray icon and menu labels based on sidecar status.

@@ -46,20 +46,19 @@ impl SidecarManager {
     }
 
     /// Spawn the Python sidecar process.
-    /// In dev mode, runs `python sidecar/sidecar_main.py`.
-    /// `event_callback` is called for each sidecar event (on a background thread).
-    pub fn spawn<F>(&self, event_callback: F) -> Result<(), String>
+    ///
+    /// `cmd` deve ter program + args ja configurados (sem stdin/stdout/stderr).
+    /// Em dev: `Command::new("python").arg("sidecar/sidecar_main.py")`
+    /// Em release: `Command::new("{resource_dir}/scribe4me-sidecar/scribe4me-sidecar[.exe]")`
+    ///
+    /// `event_callback` e chamado para cada evento do sidecar (thread background).
+    pub fn spawn<F>(&self, mut cmd: Command, event_callback: F) -> Result<(), String>
     where
         F: Fn(String, serde_json::Value) + Send + 'static,
     {
-        let sidecar_script = std::env::current_dir()
-            .unwrap_or_default()
-            .join("../sidecar/sidecar_main.py");
+        log::info!("Spawning sidecar: {:?}", cmd);
 
-        log::info!("Spawning sidecar: python {}", sidecar_script.display());
-
-        let mut child = Command::new("python")
-            .arg(&sidecar_script)
+        let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit()) // sidecar logs go to parent stderr

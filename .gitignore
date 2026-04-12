@@ -1,7 +1,7 @@
 # Dependencies
 node_modules/
 target/
-dist/
+/dist/
 __pycache__/
 *.pyc
 
@@ -13,10 +13,11 @@ __pycache__/
 src-tauri/target/
 src-tauri/gen/
 
-# Python sidecar build
-sidecar/dist/
+# Python sidecar build output (binarios compilados — nao versionar)
 sidecar/build/
-sidecar/*.spec
+sidecar/dist/scribe4me-sidecar/*
+# manter placeholder para que cargo check funcione sem build do PyInstaller
+!sidecar/dist/scribe4me-sidecar/placeholder.txt
 
 # Env
 .env
