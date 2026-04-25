@@ -69,10 +69,11 @@ fn update_shortcuts(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env_logger::Builder::from_env(
-        env_logger::Env::default().default_filter_or("scribe4me=debug,info"),
+    // try_init evita panic se Tauri ja inicializou um logger
+    let _ = env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("info"),
     )
-    .init();
+    .try_init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -228,8 +229,11 @@ fn build_sidecar_command(app: &tauri::App) -> Result<std::process::Command, Box<
         }
         let mut cmd = std::process::Command::new("python");
         cmd.arg(&script);
-        // Seta cwd para o dir do sidecar para imports Python funcionarem corretamente
+        // cwd = dir do script para imports Python funcionarem
         cmd.current_dir(script.parent().unwrap());
+        // Desativa buffering de stdin/stdout do Python (critico quando piped no Windows)
+        cmd.env("PYTHONUNBUFFERED", "1");
+        cmd.env("PYTHONIOENCODING", "utf-8");
         Ok(cmd)
     }
     #[cfg(not(debug_assertions))]
