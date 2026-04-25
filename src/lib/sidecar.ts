@@ -36,29 +36,34 @@ class SidecarBridge {
       }
     );
 
-    // Ping com retry — sidecar pode ainda estar inicializando
+    // Ping com retry — exibe erro real na UI
     let connected = false;
+    let lastError: string = "";
     for (let attempt = 1; attempt <= 8; attempt++) {
+      appState.statusText = `Conectando... (tentativa ${attempt}/8)`;
       try {
         await Promise.race([
           this.send("ping"),
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("ping timeout")), 2000)
+            setTimeout(() => reject(new Error("ping timeout (2s)")), 2000)
           ),
         ]);
         connected = true;
         console.log(`[sidecar] Connected on attempt ${attempt}`);
         break;
       } catch (e) {
+        lastError = String(e);
         console.warn(`[sidecar] Ping attempt ${attempt} failed:`, e);
         if (attempt < 8) await new Promise((r) => setTimeout(r, 500));
       }
     }
 
     if (!connected) {
-      console.error("[sidecar] Failed to connect after 8 attempts");
+      console.error("[sidecar] Failed after 8 attempts:", lastError);
       appState.status = "error";
-      appState.statusText = "Backend nao disponivel";
+      appState.statusText = `Backend offline: ${lastError}`;
+      // Expor para debug via DevTools
+      (window as any).__sidecarError = lastError;
       return;
     }
 

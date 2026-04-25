@@ -524,12 +524,27 @@ def main() -> None:
 
     _startup_t0 = time.monotonic()
 
+    # Log para arquivo + stderr — diagnostico definitivo
+    import os
+    log_dir = os.environ.get("LOCALAPPDATA") or os.environ.get("HOME") or os.getcwd()
+    log_path = os.path.join(log_dir, "scribe4me-sidecar.log")
+    handlers: list = [logging.StreamHandler(sys.stderr)]
+    try:
+        handlers.append(logging.FileHandler(log_path, mode="w", encoding="utf-8"))
+    except Exception:
+        pass
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-        stream=sys.stderr,
+        handlers=handlers,
+        force=True,
     )
-    logger.info("Scribe4me sidecar starting...")
+    logger.info("=== SIDECAR STARTUP DIAGNOSTIC ===")
+    logger.info("Log file: %s", log_path)
+    logger.info("Python: %s", sys.version.split()[0])
+    logger.info("Cwd: %s", os.getcwd())
+    logger.info("Stdin isatty: %s, Stdout isatty: %s", sys.stdin.isatty(), sys.stdout.isatty())
+    logger.info("Argv: %s", sys.argv)
     send_event("status_change", {"status": "loading", "text": "Backend iniciando..."})
 
     # Inicializar config e output handler
@@ -548,22 +563,45 @@ def main() -> None:
     )
 
     startup_ms = int((time.monotonic() - _startup_t0) * 1000)
-    logger.info("Sidecar ready in %d ms", startup_ms)
+    logger.info("Sidecar ready in %d ms — entering stdin loop", startup_ms)
 
     send_event("status_change", {"status": "idle", "text": "Pronto"})
 
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            msg = json.loads(line)
-            handle_request(msg["id"], msg["method"], msg.get("params", {}))
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON: %s", line)
-        except KeyError as e:
-            logger.error("Missing field %s in: %s", e, line)
+    # Loop principal — log cada linha recebida
+    line_count = 0
+    try:
+        for line in sys.stdin:
+            line_count += 1
+            stripped = line.strip()
+            logger.info("STDIN line #%d: %r", line_count, stripped[:200])
+            if not stripped:
+                continue
+            try:
+                msg = json.loads(stripped)
+                logger.info("Dispatching: id=%s method=%s", msg.get("id"), msg.get("method"))
+                handle_request(msg["id"], msg["method"], msg.get("params", {}))
+            except json.JSONDecodeError as e:
+                logger.error("Invalid JSON: %s — %s", stripped, e)
+            except KeyError as e:
+                logger.error("Missing field %s in: %s", e, stripped)
+            except Exception as e:
+                logger.exception("Unexpected error processing line: %s", stripped)
+    except Exception as e:
+        logger.exception("FATAL: stdin loop crashed: %s", e)
+    finally:
+        logger.info("Stdin loop exited after %d lines", line_count)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        # Ultimo recurso — escreve em arquivo se tudo mais falhar
+        import traceback, os
+        log_dir = os.environ.get("LOCALAPPDATA") or os.environ.get("HOME") or os.getcwd()
+        with open(os.path.join(log_dir, "scribe4me-sidecar-crash.log"), "w", encoding="utf-8") as f:
+            f.write(f"FATAL CRASH: {e}\n\n")
+            traceback.print_exc(file=f)
+        sys.stderr.write(f"FATAL CRASH: {e}\n")
+        traceback.print_exc()
+        sys.exit(1)
