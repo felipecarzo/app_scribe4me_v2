@@ -50,9 +50,6 @@
     "shell": {
       "open": true
     },
-    "global-shortcut": {
-      "all": true
-    },
     "notification": {
       "all": true
     }
