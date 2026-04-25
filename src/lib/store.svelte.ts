@@ -34,6 +34,8 @@ interface AppState {
   sidecarConnected: boolean;
   theme: Theme;
   firstRun: boolean;
+  activeProfile: string;
+  codeMode: boolean;
 }
 
 export const appState: AppState = $state({
@@ -48,4 +50,6 @@ export const appState: AppState = $state({
   sidecarConnected: false,
   theme: "system",
   firstRun: false,
+  activeProfile: "Tech-Dev",
+  codeMode: false,
 });

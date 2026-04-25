@@ -8,7 +8,7 @@
   import Input from "./components/Input.svelte";
   import HotkeyCapture from "./components/HotkeyCapture.svelte";
 
-  type TabId = "geral" | "atalhos" | "prompt" | "api";
+  type TabId = "geral" | "atalhos" | "prompt" | "api" | "profiles";
 
   let activeTab = $state<TabId>("geral");
   let saving = $state(false);
@@ -31,6 +31,56 @@
   let apiKeyMessages = $state<Record<string, string>>({});
   let debounceTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
+  // --- Profiles state ---
+  type ProfileEntry = { name: string; prompt: string; code_mode: boolean; builtin: boolean };
+  let profiles = $state<ProfileEntry[]>([]);
+  let editingProfile = $state<ProfileEntry | null>(null);
+  let isNewProfile = $state(false);
+  let profileSaving = $state(false);
+  let profileDeleteConfirm = $state<string | null>(null);
+
+  async function loadProfiles() {
+    profiles = await sidecar.listProfiles();
+  }
+
+  async function selectProfile(name: string) {
+    await sidecar.setActiveProfile(name);
+    appState.activeProfile = name;
+    const p = profiles.find((x) => x.name === name);
+    if (p) appState.codeMode = p.code_mode;
+  }
+
+  function startNewProfile() {
+    editingProfile = { name: "", prompt: "", code_mode: false, builtin: false };
+    isNewProfile = true;
+  }
+
+  function startEditProfile(p: ProfileEntry) {
+    editingProfile = { ...p };
+    isNewProfile = false;
+  }
+
+  async function saveEditingProfile() {
+    if (!editingProfile || !editingProfile.name.trim() || !editingProfile.prompt.trim()) return;
+    profileSaving = true;
+    try {
+      await sidecar.saveProfile(editingProfile.name.trim(), editingProfile.prompt.trim(), editingProfile.code_mode);
+      await loadProfiles();
+      editingProfile = null;
+    } finally {
+      profileSaving = false;
+    }
+  }
+
+  async function deleteProfile(name: string) {
+    await sidecar.deleteProfile(name);
+    profileDeleteConfirm = null;
+    await loadProfiles();
+    if (appState.activeProfile === name) {
+      await selectProfile("Tech-Dev");
+    }
+  }
+
   // Hotkey state — capturingHotkey coordena qual instancia esta capturando
   let hotkeys = $state({
     push_to_talk: "Ctrl+Alt+H",
@@ -42,6 +92,7 @@
 
   // Load config on mount
   onMount(() => {
+    loadProfiles();
     sidecar.getConfig().then((config) => {
       if (config.custom_prompt) customPrompt = config.custom_prompt as string;
       if (config.api_keys) apiKeys = { ...apiKeys, ...(config.api_keys as Record<string, string>) };
@@ -84,6 +135,7 @@
     { id: "atalhos", label: "Atalhos" },
     { id: "prompt", label: "Prompt" },
     { id: "api", label: "API" },
+    { id: "profiles", label: "Profiles" },
   ];
 
   const backendOptions: { value: Backend; label: string }[] = [
@@ -298,13 +350,141 @@
           Groq (gratis) | OpenAI ($0.006/min) | Gemini (free tier) | Deepgram (200h/mes gratis)
         </p>
       </div>
+
+    {:else if activeTab === "profiles"}
+      <div transition:fade={{ duration: 120 }} class="space-y-4">
+        {#if editingProfile}
+          <!-- Editor de profile -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-[var(--text-primary)]">
+                {isNewProfile ? "Novo Profile" : "Editar Profile"}
+              </span>
+              <button
+                onclick={() => (editingProfile = null)}
+                class="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[var(--text-muted)]">Nome</label>
+              <input
+                bind:value={editingProfile.name}
+                disabled={!isNewProfile && editingProfile.builtin}
+                placeholder="Tech-Dev"
+                class="w-full px-3 py-2 text-sm bg-[var(--bg-secondary)] border border-[var(--border)]
+                  rounded-[var(--radius-md)] text-[var(--text-secondary)] focus:outline-none
+                  focus:border-[var(--accent-blue)] disabled:opacity-50 transition-colors"
+              />
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                bind:checked={editingProfile.code_mode}
+                class="accent-[var(--accent-blue)] w-4 h-4"
+              />
+              <span class="text-sm text-[var(--text-secondary)]">Code Mode (Voice Coding)</span>
+            </label>
+
+            <div class="space-y-1">
+              <label class="text-xs text-[var(--text-muted)]">Prompt (initial_prompt para o Whisper)</label>
+              <textarea
+                bind:value={editingProfile.prompt}
+                placeholder="Texto de exemplo no estilo e vocabulario do seu dominio..."
+                class="w-full h-32 px-3 py-2 text-sm bg-[var(--bg-secondary)] border border-[var(--border)]
+                  rounded-[var(--radius-md)] text-[var(--text-secondary)] placeholder:text-[var(--text-muted)]
+                  focus:outline-none focus:border-[var(--accent-blue)] resize-none transition-colors"
+              ></textarea>
+            </div>
+
+            <Button variant="primary" loading={profileSaving} onclick={saveEditingProfile}>
+              Salvar profile
+            </Button>
+          </div>
+        {:else}
+          <!-- Lista de profiles -->
+          <p class="text-xs text-[var(--text-muted)]">
+            Profiles definem o <em>initial_prompt</em> do Whisper para melhorar reconhecimento por dominio.
+          </p>
+
+          <div class="space-y-2">
+            {#each profiles as p}
+              <div
+                class="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] border transition-all
+                  {appState.activeProfile === p.name
+                    ? 'border-[var(--accent-blue)] bg-[var(--accent-blue)]/10'
+                    : 'border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--border-hover)]'}"
+              >
+                <button
+                  class="flex-1 text-left min-w-0"
+                  onclick={() => selectProfile(p.name)}
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-[var(--text-primary)] truncate">{p.name}</span>
+                    {#if p.code_mode}
+                      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--accent-blue)]/20 text-[var(--accent-blue)] shrink-0">
+                        CODE
+                      </span>
+                    {/if}
+                    {#if p.builtin}
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-muted)] shrink-0">
+                        builtin
+                      </span>
+                    {/if}
+                  </div>
+                </button>
+
+                <button
+                  onclick={() => startEditProfile(p)}
+                  class="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors shrink-0"
+                >
+                  Editar
+                </button>
+
+                {#if !p.builtin}
+                  {#if profileDeleteConfirm === p.name}
+                    <button
+                      onclick={() => deleteProfile(p.name)}
+                      class="text-xs text-red-400 hover:text-red-300 transition-colors shrink-0"
+                    >
+                      Confirmar
+                    </button>
+                    <button
+                      onclick={() => (profileDeleteConfirm = null)}
+                      class="text-xs text-[var(--text-muted)] transition-colors shrink-0"
+                    >
+                      Cancelar
+                    </button>
+                  {:else}
+                    <button
+                      onclick={() => (profileDeleteConfirm = p.name)}
+                      class="text-xs text-[var(--text-muted)] hover:text-red-400 transition-colors shrink-0"
+                    >
+                      Deletar
+                    </button>
+                  {/if}
+                {/if}
+              </div>
+            {/each}
+          </div>
+
+          <Button variant="ghost" onclick={startNewProfile}>
+            + Novo profile
+          </Button>
+        {/if}
+      </div>
     {/if}
   </div>
 
-  <!-- Save button -->
+  <!-- Save button — oculto na aba profiles (salva inline) -->
   <div class="shrink-0">
-    <Button variant="primary" loading={saving} onclick={handleSave}>
-      Salvar
-    </Button>
+    {#if activeTab !== "profiles"}
+      <Button variant="primary" loading={saving} onclick={handleSave}>
+        Salvar
+      </Button>
+    {/if}
   </div>
 </div>

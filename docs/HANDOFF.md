@@ -2,10 +2,10 @@
 
 ## Meta
 
-- **Data:** 2026-04-12
+- **Data:** 2026-04-25
 - **Branch:** main
-- **Ultimo commit:** 33db055 — docs Sprint 6 README
-- **Agente:** Claude Sonnet 4.6 (autopilot)
+- **Ultimo commit:** 9ea945f — fix(ci): enable macos-private-api for transparent overlay + libfuse2 for AppImage
+- **Agente:** Claude Sonnet 4.6
 - **Maquina:** ALIENWARE-LIPE (Windows 11)
 
 ## Estado do projeto

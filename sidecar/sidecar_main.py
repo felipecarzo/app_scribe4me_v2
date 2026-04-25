@@ -21,12 +21,14 @@ from config import (
     SUPPORTED_API_BACKENDS,
     Config,
     is_first_run,
+    load_active_profile,
     load_api_config,
     load_api_keys,
     load_custom_prompt,
     load_hotkeys,
     load_output_mode,
     mark_first_run_done,
+    save_active_profile,
     save_api_config,
     save_api_keys,
     save_custom_prompt,
@@ -37,9 +39,18 @@ from config import (
 )
 from clipboard import OutputHandler
 from hardware import detect_hardware, recommend_model
+from profiles import (
+    Profile,
+    delete_profile as _delete_profile,
+    get_profile_by_name,
+    get_default_profile,
+    list_profiles,
+    save_profile as _save_profile,
+)
 from recorder import Recorder
 from transcriber import Transcriber
 from transcriber_api import create_api_transcriber
+from voice_commands import VoiceCommandEngine
 
 logger = logging.getLogger("scribe4me-sidecar")
 
@@ -49,6 +60,8 @@ _recorder: Recorder | None = None
 _transcriber: Transcriber | None = None
 _output: OutputHandler | None = None
 _realtime_manager = None  # DeepgramRealtimeManager (lazy import)
+_active_profile: Profile | None = None
+_voice_engine: VoiceCommandEngine | None = None
 _stdout_lock = threading.Lock()
 _state_lock = threading.Lock()  # protege acesso a _config, _recorder, _transcriber, _realtime_manager
 
@@ -90,6 +103,7 @@ def _handle_ping(req_id: int, params: dict) -> None:
 def _handle_get_config(req_id: int, params: dict) -> None:
     api_cfg = load_api_config()
     raw = _load_config_data()
+    profile = _active_profile or get_default_profile()
     send_response(req_id, {
         "backend": api_cfg["backend"],
         "model": _config.model if _config else "large-v3",
@@ -101,6 +115,8 @@ def _handle_get_config(req_id: int, params: dict) -> None:
         "custom_prompt": load_custom_prompt(),
         "theme": raw.get("theme", "system"),
         "first_run": is_first_run(),
+        "active_profile": profile.name,
+        "code_mode": profile.code_mode,
     })
 
 
@@ -293,17 +309,39 @@ def _transcribe_audio(audio) -> str:
     return _transcriber.transcribe(audio)
 
 
+def _apply_voice_commands(text: str) -> tuple[str, list[str]]:
+    """Aplica voice commands se code_mode ativo. Retorna (texto_final, keypresses)."""
+    if not _active_profile or not _active_profile.code_mode or not _voice_engine:
+        return text, []
+
+    results = _voice_engine.process(text)
+    text_parts = []
+    keypresses = []
+    for r in results:
+        if r.keypress:
+            keypresses.append(r.keypress)
+        elif r.text:
+            text_parts.append(r.text)
+
+    return "".join(text_parts), keypresses
+
+
 def _output_text(req_id: int, text: str) -> None:
     """Envia texto transcrito para clipboard/cursor e responde."""
-    if text and _output and _config:
-        if _config.output_mode == "cursor":
-            if _output.prepare_paste(text):
-                send_event("paste_ready", {"text": text})
-        else:
-            _output.copy_to_clipboard(text)
+    processed_text, keypresses = _apply_voice_commands(text)
+
+    if _output and _config:
+        if keypresses:
+            send_event("voice_keypresses", {"keys": keypresses})
+        if processed_text:
+            if _config.output_mode == "cursor":
+                if _output.prepare_paste(processed_text):
+                    send_event("paste_ready", {"text": processed_text})
+            else:
+                _output.copy_to_clipboard(processed_text)
 
     send_event("status_change", {"status": "idle", "text": "Pronto"})
-    send_response(req_id, {"text": text, "ok": True})
+    send_response(req_id, {"text": processed_text, "ok": True, "original_text": text})
 
 
 def _handle_cancel_recording(req_id: int, params: dict) -> None:
@@ -376,6 +414,76 @@ def _handle_test_api_key(req_id: int, params: dict) -> None:
     _run_in_thread(_do_test)
 
 
+# --- Handlers de Profiles ---
+
+
+def _handle_list_profiles(req_id: int, params: dict) -> None:
+    profiles = list_profiles()
+    send_response(req_id, {
+        "profiles": [
+            {"name": p.name, "prompt": p.prompt, "code_mode": p.code_mode, "builtin": p.builtin}
+            for p in profiles
+        ]
+    })
+
+
+def _handle_get_active_profile(req_id: int, params: dict) -> None:
+    profile = _active_profile or get_default_profile()
+    send_response(req_id, {
+        "name": profile.name,
+        "prompt": profile.prompt,
+        "code_mode": profile.code_mode,
+        "builtin": profile.builtin,
+    })
+
+
+def _handle_set_active_profile(req_id: int, params: dict) -> None:
+    global _active_profile
+    name = params.get("name", "")
+    profile = get_profile_by_name(name)
+    if not profile:
+        send_response(req_id, error=f"Profile nao encontrado: {name}")
+        return
+    with _state_lock:
+        _active_profile = profile
+    save_active_profile(name)
+    logger.info("Profile ativo: %s (code_mode=%s)", name, profile.code_mode)
+    send_response(req_id, {"ok": True, "name": profile.name, "code_mode": profile.code_mode})
+    send_event("profile_changed", {"name": profile.name, "code_mode": profile.code_mode})
+
+
+def _handle_save_profile(req_id: int, params: dict) -> None:
+    global _active_profile
+    name = params.get("name", "").strip()
+    prompt = params.get("prompt", "").strip()
+    code_mode = bool(params.get("code_mode", False))
+
+    if not name:
+        send_response(req_id, error="Nome do profile nao pode ser vazio")
+        return
+    if not prompt:
+        send_response(req_id, error="Prompt nao pode ser vazio")
+        return
+
+    profile = _save_profile(name, prompt, code_mode)
+    send_response(req_id, {"ok": True, "name": profile.name})
+
+
+def _handle_delete_profile(req_id: int, params: dict) -> None:
+    global _active_profile
+    name = params.get("name", "")
+    ok = _delete_profile(name)
+    if not ok:
+        send_response(req_id, error=f"Nao foi possivel deletar '{name}' (builtin ou nao existe)")
+        return
+    # Se era o profile ativo, volta para o default
+    if _active_profile and _active_profile.name == name:
+        with _state_lock:
+            _active_profile = get_default_profile()
+        save_active_profile(_active_profile.name)
+    send_response(req_id, {"ok": True})
+
+
 # --- Dispatch table ---
 
 _HANDLERS = {
@@ -389,6 +497,11 @@ _HANDLERS = {
     "cancel_recording": _handle_cancel_recording,
     "copy_to_clipboard": _handle_copy_to_clipboard,
     "test_api_key": _handle_test_api_key,
+    "list_profiles": _handle_list_profiles,
+    "get_active_profile": _handle_get_active_profile,
+    "set_active_profile": _handle_set_active_profile,
+    "save_profile": _handle_save_profile,
+    "delete_profile": _handle_delete_profile,
 }
 
 
@@ -423,9 +536,15 @@ def main() -> None:
     _config = Config()
     _output = OutputHandler()
 
+    # Inicializar profiles e voice engine
+    global _active_profile, _voice_engine
+    _active_profile = get_profile_by_name(load_active_profile()) or get_default_profile()
+    _voice_engine = VoiceCommandEngine()
+
     logger.info(
-        "Config: backend=%s, model=%s, device=%s, output=%s",
+        "Config: backend=%s, model=%s, device=%s, output=%s, profile=%s (code_mode=%s)",
         _config.api_backend, _config.model, _config.device, _config.output_mode,
+        _active_profile.name, _active_profile.code_mode,
     )
 
     startup_ms = int((time.monotonic() - _startup_t0) * 1000)

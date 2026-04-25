@@ -2,13 +2,17 @@
   interface Props {
     text?: string;
     status?: "recording" | "transcribing";
+    codeMode?: boolean;
   }
 
-  let { text = "", status = "recording" }: Props = $props();
+  let { text = "", status = "recording", codeMode = false }: Props = $props();
 </script>
 
 <div class="pill" data-status={status}>
   <span class="dot"></span>
+  {#if codeMode}
+    <span class="code-badge">CODE</span>
+  {/if}
   <span class="label">{text || (status === "transcribing" ? "Transcrevendo..." : "Ouvindo...")}</span>
 </div>
 
@@ -56,6 +60,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .code-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #60a5fa;
+    background: rgba(96, 165, 250, 0.15);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    border-radius: 4px;
+    padding: 1px 5px;
+    flex-shrink: 0;
   }
 
   @keyframes pulse-dot {

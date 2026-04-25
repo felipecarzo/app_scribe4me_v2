@@ -50,6 +50,8 @@ class SidecarBridge {
       appState.realtimeEnabled = (config.realtime as boolean) ?? false;
       appState.theme = (config.theme as typeof appState.theme) ?? "system";
       appState.firstRun = (config.first_run as boolean) ?? false;
+      appState.activeProfile = (config.active_profile as string) ?? "Tech-Dev";
+      appState.codeMode = (config.code_mode as boolean) ?? false;
 
       // Update tray menu with real config
       this.updateTrayInfo(appState.backend, appState.model);
@@ -122,6 +124,25 @@ class SidecarBridge {
     return (await this.send("test_api_key", { provider, key })) as { ok: boolean; latency_ms?: number; error?: string };
   }
 
+  // --- Profiles API ---
+
+  async listProfiles(): Promise<Array<{ name: string; prompt: string; code_mode: boolean; builtin: boolean }>> {
+    const res = (await this.send("list_profiles")) as { profiles: Array<{ name: string; prompt: string; code_mode: boolean; builtin: boolean }> };
+    return res.profiles ?? [];
+  }
+
+  async setActiveProfile(name: string): Promise<void> {
+    await this.send("set_active_profile", { name });
+  }
+
+  async saveProfile(name: string, prompt: string, codeMode: boolean): Promise<void> {
+    await this.send("save_profile", { name, prompt, code_mode: codeMode });
+  }
+
+  async deleteProfile(name: string): Promise<void> {
+    await this.send("delete_profile", { name });
+  }
+
   /** Update tray menu labels for backend and model. */
   async updateTrayInfo(backend: string, model: string): Promise<void> {
     await invoke("update_tray_info", { backend, model });
@@ -151,6 +172,9 @@ class SidecarBridge {
     } else if (eventName === "paste_ready") {
       appState.lastTranscription = (data.text as string) ?? "";
       this.notify("Texto pronto", "Colado na posicao do cursor");
+    } else if (eventName === "profile_changed") {
+      appState.activeProfile = (data.name as string) ?? appState.activeProfile;
+      appState.codeMode = (data.code_mode as boolean) ?? false;
     }
   }
 

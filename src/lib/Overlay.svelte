@@ -9,6 +9,7 @@
   let text = $state("");
   let status = $state<OverlayStatus>("recording");
   let visible = $state(false);
+  let codeMode = $state(false);
   let clearTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Listen for sidecar events — broadcast from Rust to all windows
@@ -20,7 +21,9 @@
       (ev) => {
         const { event, data } = ev.payload;
 
-        if (event === "realtime_text") {
+        if (event === "profile_changed") {
+          codeMode = (data.code_mode as boolean) ?? false;
+        } else if (event === "realtime_text") {
           text = (data.text as string) ?? "";
         } else if (event === "status_change") {
           const s = data.status as string;
@@ -56,7 +59,7 @@
       in:fly={{ y: 18, duration: 260, easing: cubicOut }}
       out:fade={{ duration: 360 }}
     >
-      <Pill {text} {status} />
+      <Pill {text} {status} {codeMode} />
     </div>
   {/if}
 </div>

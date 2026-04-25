@@ -136,6 +136,18 @@ def mark_first_run_done() -> None:
     _save_config_data(data)
 
 
+def load_active_profile() -> str:
+    """Retorna nome do profile ativo (default: Tech-Dev)."""
+    return _load_config_data().get("active_profile", "Tech-Dev")
+
+
+def save_active_profile(name: str) -> None:
+    """Salva nome do profile ativo no config.json."""
+    data = _load_config_data()
+    data["active_profile"] = name
+    _save_config_data(data)
+
+
 @dataclass
 class Config:
     """Config runtime do sidecar — sem hotkeys (gerenciados pelo Tauri)."""
