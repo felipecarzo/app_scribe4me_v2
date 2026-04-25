@@ -46,12 +46,5 @@
       "../sidecar/dist/scribe4me-sidecar/**/*"
     ]
   },
-  "plugins": {
-    "shell": {
-      "open": true
-    },
-    "notification": {
-      "all": true
-    }
-  }
+  "plugins": {}
 }
