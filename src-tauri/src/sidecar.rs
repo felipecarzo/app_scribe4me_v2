@@ -58,10 +58,12 @@ impl SidecarManager {
     {
         log::info!("Spawning sidecar: {:?}", cmd);
 
+        eprintln!("[Tauri] Spawning sidecar: {:?}", cmd);
+
         let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit()) // sidecar logs go to parent stderr
+            .stderr(Stdio::piped())
             .spawn()
             .map_err(|e| format!("Failed to spawn sidecar: {e}"))?;
 
@@ -69,6 +71,10 @@ impl SidecarManager {
             .stdout
             .take()
             .ok_or("Failed to capture sidecar stdout")?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or("Failed to capture sidecar stderr")?;
         let stdin = child
             .stdin
             .take()
@@ -128,6 +134,16 @@ impl SidecarManager {
                 }
             }
             log::info!("Sidecar stdout reader thread exiting");
+        });
+
+        // Thread que redireciona stderr do Python para o terminal do Tauri
+        thread::spawn(move || {
+            let reader = BufReader::new(stderr);
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    eprintln!("[sidecar] {line}");
+                }
+            }
         });
 
         Ok(())

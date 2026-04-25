@@ -69,6 +69,11 @@ fn update_shortcuts(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("scribe4me=debug,info"),
+    )
+    .init();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -206,13 +211,25 @@ pub fn run() {
 fn build_sidecar_command(app: &tauri::App) -> Result<std::process::Command, Box<dyn std::error::Error>> {
     #[cfg(debug_assertions)]
     {
-        let _ = app; // app nao e usado em dev mode
-        // Dev: sidecar Python a partir do current_dir (workspace root)
-        let script = std::env::current_dir()
-            .unwrap_or_default()
-            .join("../sidecar/sidecar_main.py");
+        let _ = app;
+        // CARGO_MANIFEST_DIR e resolvido em compile-time para src-tauri/
+        // .parent() sobe para o workspace root, independente do current_dir()
+        let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let script = manifest_dir
+            .parent()
+            .ok_or("Failed to resolve workspace root from CARGO_MANIFEST_DIR")?
+            .join("sidecar/sidecar_main.py");
+        eprintln!("[Tauri] Sidecar script path: {}", script.display());
+        if !script.exists() {
+            return Err(format!(
+                "Sidecar script not found: {}",
+                script.display()
+            ).into());
+        }
         let mut cmd = std::process::Command::new("python");
-        cmd.arg(script);
+        cmd.arg(&script);
+        // Seta cwd para o dir do sidecar para imports Python funcionarem corretamente
+        cmd.current_dir(script.parent().unwrap());
         Ok(cmd)
     }
     #[cfg(not(debug_assertions))]

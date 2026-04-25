@@ -36,13 +36,36 @@ class SidecarBridge {
       }
     );
 
-    // Ping the sidecar to verify connection, then load config
-    try {
-      await this.send("ping");
-      appState.sidecarConnected = true;
-      console.log("[sidecar] Connected");
+    // Ping com retry — sidecar pode ainda estar inicializando
+    let connected = false;
+    for (let attempt = 1; attempt <= 8; attempt++) {
+      try {
+        await Promise.race([
+          this.send("ping"),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("ping timeout")), 2000)
+          ),
+        ]);
+        connected = true;
+        console.log(`[sidecar] Connected on attempt ${attempt}`);
+        break;
+      } catch (e) {
+        console.warn(`[sidecar] Ping attempt ${attempt} failed:`, e);
+        if (attempt < 8) await new Promise((r) => setTimeout(r, 500));
+      }
+    }
 
-      // Load real config from sidecar and sync appState
+    if (!connected) {
+      console.error("[sidecar] Failed to connect after 8 attempts");
+      appState.status = "error";
+      appState.statusText = "Backend nao disponivel";
+      return;
+    }
+
+    appState.sidecarConnected = true;
+
+    // Load real config from sidecar and sync appState
+    try {
       const config = await this.getConfig();
       appState.backend = (config.backend as typeof appState.backend) ?? "local";
       appState.model = (config.model as string) ?? "large-v3";
