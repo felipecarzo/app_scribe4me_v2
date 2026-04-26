@@ -524,6 +524,14 @@ def main() -> None:
 
     _startup_t0 = time.monotonic()
 
+    # CRITICO: forcar line-buffering em stdout/stderr quando piped no Windows
+    # Sem isso, full buffering trava as respostas mesmo com flush() explicito
+    try:
+        sys.stdout.reconfigure(line_buffering=True, encoding="utf-8")  # type: ignore[attr-defined]
+        sys.stderr.reconfigure(line_buffering=True, encoding="utf-8")  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
     # Log para arquivo + stderr — diagnostico definitivo
     import os
     log_dir = os.environ.get("LOCALAPPDATA") or os.environ.get("HOME") or os.getcwd()

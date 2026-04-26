@@ -7,9 +7,16 @@
   import { sidecar } from "./lib/sidecar";
   import { appState } from "./lib/store.svelte";
 
-  // Initialize sidecar connection on mount
+  // Initialize sidecar connection on mount — catch async errors
+  let initialized = $state(false);
   $effect(() => {
-    sidecar.init();
+    if (initialized) return;
+    initialized = true;
+    sidecar.init().catch((e) => {
+      console.error("[App] Sidecar init crashed:", e);
+      appState.status = "error";
+      appState.statusText = `Init crashed: ${String(e)}`;
+    });
     return () => sidecar.destroy();
   });
 

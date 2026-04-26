@@ -30,6 +30,7 @@ fn get_app_version() -> String {
 }
 
 /// Send a JSON-RPC request to the sidecar and return the result.
+/// Timeout 10s para evitar block infinito se sidecar travar.
 #[tauri::command]
 async fn sidecar_send(
     method: String,
@@ -37,7 +38,11 @@ async fn sidecar_send(
     state: tauri::State<'_, Arc<SidecarManager>>,
 ) -> Result<serde_json::Value, String> {
     let rx = state.send_request(&method, params)?;
-    rx.await.map_err(|_| "Sidecar response channel closed".to_string())?
+    match tokio::time::timeout(std::time::Duration::from_secs(10), rx).await {
+        Ok(Ok(result)) => result,
+        Ok(Err(_)) => Err("Sidecar response channel closed".to_string()),
+        Err(_) => Err(format!("Sidecar timeout (10s) on method '{method}'")),
+    }
 }
 
 /// Update tray menu labels for backend and model.
@@ -152,10 +157,9 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Hide main window on start — app lives in tray
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.hide();
-            }
+            // Window ja inicia hidden via tauri.conf.json (visible: false).
+            // Tentar hide() em setup pode falhar pois a window pode nao existir ainda.
+            // Usar webview_window_builder + try_state pattern em vez disso.
 
             // Spawn Python sidecar
             let sidecar = Arc::new(SidecarManager::new());

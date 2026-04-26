@@ -134,13 +134,16 @@ fn register_with_config(app: &AppHandle, cfg: HotkeyConfig) -> Result<(), String
     Ok(())
 }
 
-/// Start recording via sidecar.
+/// Start recording via sidecar. Defensive: usa try_state para nao panic.
 fn handle_start(app: &AppHandle) {
     if is_recording() {
         return;
     }
-    let sidecar = app.state::<Arc<SidecarManager>>();
-    let _ = sidecar.send_request("start_recording", serde_json::json!({}));
+    if let Some(sidecar) = app.try_state::<Arc<SidecarManager>>() {
+        let _ = sidecar.send_request("start_recording", serde_json::json!({}));
+    } else {
+        log::warn!("handle_start: sidecar nao registrado ainda");
+    }
 }
 
 /// Stop recording via sidecar.
@@ -148,8 +151,11 @@ fn handle_stop(app: &AppHandle) {
     if !is_recording() {
         return;
     }
-    let sidecar = app.state::<Arc<SidecarManager>>();
-    let _ = sidecar.send_request("stop_recording", serde_json::json!({}));
+    if let Some(sidecar) = app.try_state::<Arc<SidecarManager>>() {
+        let _ = sidecar.send_request("stop_recording", serde_json::json!({}));
+    } else {
+        log::warn!("handle_stop: sidecar nao registrado ainda");
+    }
 }
 
 /// Toggle: start or stop recording based on current state.
@@ -163,6 +169,9 @@ fn handle_toggle(app: &AppHandle) {
 
 /// Cancel: cancel current recording.
 fn handle_cancel(app: &AppHandle) {
-    let sidecar = app.state::<Arc<SidecarManager>>();
-    let _ = sidecar.send_request("cancel_recording", serde_json::json!({}));
+    if let Some(sidecar) = app.try_state::<Arc<SidecarManager>>() {
+        let _ = sidecar.send_request("cancel_recording", serde_json::json!({}));
+    } else {
+        log::warn!("handle_cancel: sidecar nao registrado ainda");
+    }
 }
