@@ -26,10 +26,10 @@ _CONFIG_FILE = APP_DATA_DIR / "config.json"
 _config_lock = threading.Lock()
 
 DEFAULT_HOTKEYS = {
-    "push_to_talk": "Ctrl+Alt+H",
-    "toggle": "Ctrl+Alt+T",
-    "cancel": "Ctrl+Alt+C",
-    "quit": "Ctrl+Q",
+    "push_to_talk": "CommandOrControl+Alt+H",
+    "toggle": "CommandOrControl+Alt+T",
+    "cancel": "CommandOrControl+Alt+C",
+    "quit": "CommandOrControl+Q",
 }
 
 SUPPORTED_API_BACKENDS = ["local", "openai", "groq", "gemini", "deepgram"]

@@ -23,11 +23,13 @@ pub struct HotkeyConfig {
 
 impl Default for HotkeyConfig {
     fn default() -> Self {
+        // Formato canonico Tauri v2: CommandOrControl+Alt+<Key>
+        // CommandOrControl = Ctrl no Win/Linux, Cmd no macOS
         Self {
-            ptt:    "Ctrl+Alt+H".into(),
-            toggle: "Ctrl+Alt+T".into(),
-            cancel: "Ctrl+Alt+C".into(),
-            quit:   "Ctrl+Q".into(),
+            ptt:    "CommandOrControl+Alt+H".into(),
+            toggle: "CommandOrControl+Alt+T".into(),
+            cancel: "CommandOrControl+Alt+C".into(),
+            quit:   "CommandOrControl+Q".into(),
         }
     }
 }
@@ -85,33 +87,40 @@ fn register_with_config(app: &AppHandle, cfg: HotkeyConfig) -> Result<(), String
         }
     }
 
-    eprintln!("[hotkeys] Parsing: PTT={} Toggle={} Cancel={} Quit={}",
-        cfg.ptt, cfg.toggle, cfg.cancel, cfg.quit);
+    // Normaliza formato — aceita "Ctrl" como alias canonico de "CommandOrControl"
+    let normalize = |s: &str| -> String {
+        s.replace("CmdOrCtrl", "CommandOrControl")
+         .replace("Ctrl", "CommandOrControl")
+    };
+    let ptt_str    = normalize(&cfg.ptt);
+    let toggle_str = normalize(&cfg.toggle);
+    let cancel_str = normalize(&cfg.cancel);
+    let quit_str   = normalize(&cfg.quit);
 
-    let ptt:    Shortcut = cfg.ptt.parse().map_err(|e| format!("Invalid PTT shortcut '{}': {e}", cfg.ptt))?;
-    let toggle: Shortcut = cfg.toggle.parse().map_err(|e| format!("Invalid toggle shortcut '{}': {e}", cfg.toggle))?;
-    let cancel: Shortcut = cfg.cancel.parse().map_err(|e| format!("Invalid cancel shortcut '{}': {e}", cfg.cancel))?;
-    let quit:   Shortcut = cfg.quit.parse().map_err(|e| format!("Invalid quit shortcut '{}': {e}", cfg.quit))?;
+    eprintln!("[hotkeys] Parsing: PTT={} Toggle={} Cancel={} Quit={}",
+        ptt_str, toggle_str, cancel_str, quit_str);
+
+    let ptt:    Shortcut = ptt_str.parse().map_err(|e| format!("Invalid PTT shortcut '{}': {e}", ptt_str))?;
+    let toggle: Shortcut = toggle_str.parse().map_err(|e| format!("Invalid toggle shortcut '{}': {e}", toggle_str))?;
+    let cancel: Shortcut = cancel_str.parse().map_err(|e| format!("Invalid cancel shortcut '{}': {e}", cancel_str))?;
+    let quit:   Shortcut = quit_str.parse().map_err(|e| format!("Invalid quit shortcut '{}': {e}", quit_str))?;
 
     eprintln!("[hotkeys] Parsed shortcuts: PTT={:?} Toggle={:?} Cancel={:?} Quit={:?}",
         ptt, toggle, cancel, quit);
 
     let app_handle = app.clone();
+    // Clones para usar no closure (Shortcut implements Clone+PartialEq)
+    let ptt_c    = ptt.clone();
+    let toggle_c = toggle.clone();
+    let cancel_c = cancel.clone();
+    let quit_c   = quit.clone();
 
     app.global_shortcut()
         .on_shortcuts([ptt, toggle, cancel, quit], move |_app, shortcut, event| {
-            let shortcut_str = shortcut.to_string();
-            eprintln!("[hotkeys] FIRED: '{}' state={:?}", shortcut_str, event.state);
-            let current = match HOTKEY_CONFIG.lock() {
-                Ok(g) => g.clone(),
-                Err(e) => {
-                    log::error!("HOTKEY_CONFIG lock poisoned in shortcut handler: {e}");
-                    return;
-                }
-            };
+            eprintln!("[hotkeys] FIRED: {:?} state={:?}", shortcut, event.state);
 
             // PTT: start on press, stop on release
-            if shortcut_str == current.ptt {
+            if shortcut == &ptt_c {
                 match event.state {
                     ShortcutState::Pressed  => handle_start(&app_handle),
                     ShortcutState::Released => handle_stop(&app_handle),
@@ -124,11 +133,11 @@ fn register_with_config(app: &AppHandle, cfg: HotkeyConfig) -> Result<(), String
                 return;
             }
 
-            if shortcut_str == current.toggle {
+            if shortcut == &toggle_c {
                 handle_toggle(&app_handle);
-            } else if shortcut_str == current.cancel {
+            } else if shortcut == &cancel_c {
                 handle_cancel(&app_handle);
-            } else if shortcut_str == current.quit {
+            } else if shortcut == &quit_c {
                 app_handle.exit(0);
             }
         })
