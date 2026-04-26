@@ -170,9 +170,14 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Window ja inicia hidden via tauri.conf.json (visible: false).
-            // Tentar hide() em setup pode falhar pois a window pode nao existir ainda.
-            // Usar webview_window_builder + try_state pattern em vez disso.
+            // Forca skip_taskbar na main window programaticamente
+            // (o config tauri.conf.json as vezes nao aplica no Windows)
+            if let Some(main_window) = app.get_webview_window("main") {
+                let _ = main_window.set_skip_taskbar(true);
+                eprintln!("[setup] main window skip_taskbar applied");
+            } else {
+                eprintln!("[setup] WARNING: main window nao existe ainda em setup()");
+            }
 
             // Spawn Python sidecar
             let sidecar = Arc::new(SidecarManager::new());
