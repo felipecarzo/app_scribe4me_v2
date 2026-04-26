@@ -94,6 +94,14 @@ pub fn run() {
     .try_init();
 
     tauri::Builder::default()
+        // Single-instance: se 2a instancia tenta abrir, foca a 1a e fecha a 2a
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            eprintln!("[single-instance] segunda instancia tentou abrir — focando primeira");
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
