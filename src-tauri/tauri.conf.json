@@ -13,6 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "Scribe4me",
         "width": 480,
         "height": 580,
@@ -20,7 +21,9 @@
         "center": true,
         "decorations": false,
         "transparent": true,
-        "visible": true
+        "visible": true,
+        "skipTaskbar": true,
+        "alwaysOnTop": false
       }
     ],
     "trayIcon": {

@@ -188,6 +188,12 @@
       }
 
       sidecar.updateTrayInfo(appState.backend, appState.model);
+
+      // Esconde a window apos salvar (volta pro tray)
+      const hide = (window as any).__hideMainWindow;
+      if (typeof hide === "function") {
+        hide();
+      }
     } finally {
       saving = false;
     }

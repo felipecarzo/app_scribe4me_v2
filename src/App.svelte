@@ -1,11 +1,22 @@
 <script lang="ts">
   import "./app.css";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
   import Settings from "./lib/Settings.svelte";
   import StatusBar from "./lib/StatusBar.svelte";
   import Onboarding from "./lib/components/Onboarding.svelte";
   import ThemeToggle from "./lib/components/ThemeToggle.svelte";
   import { sidecar } from "./lib/sidecar";
   import { appState } from "./lib/store.svelte";
+
+  async function hideWindow() {
+    try {
+      await getCurrentWindow().hide();
+    } catch (e) {
+      console.error("[App] hide failed:", e);
+    }
+  }
+  // Expor pra Settings chamar apos salvar
+  (window as any).__hideMainWindow = hideWindow;
 
   // Initialize sidecar connection on mount — catch async errors
   let initialized = $state(false);
@@ -44,6 +55,14 @@
     <div class="flex items-center gap-3">
       <StatusBar />
       <ThemeToggle />
+      <button
+        onclick={hideWindow}
+        class="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors text-lg leading-none px-1"
+        title="Fechar (esconde no tray)"
+        aria-label="Fechar"
+      >
+        ×
+      </button>
     </div>
   </div>
 
