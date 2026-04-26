@@ -85,16 +85,23 @@ fn register_with_config(app: &AppHandle, cfg: HotkeyConfig) -> Result<(), String
         }
     }
 
-    let ptt:    Shortcut = cfg.ptt.parse().map_err(|e| format!("Invalid PTT shortcut: {e}"))?;
-    let toggle: Shortcut = cfg.toggle.parse().map_err(|e| format!("Invalid toggle shortcut: {e}"))?;
-    let cancel: Shortcut = cfg.cancel.parse().map_err(|e| format!("Invalid cancel shortcut: {e}"))?;
-    let quit:   Shortcut = cfg.quit.parse().map_err(|e| format!("Invalid quit shortcut: {e}"))?;
+    eprintln!("[hotkeys] Parsing: PTT={} Toggle={} Cancel={} Quit={}",
+        cfg.ptt, cfg.toggle, cfg.cancel, cfg.quit);
+
+    let ptt:    Shortcut = cfg.ptt.parse().map_err(|e| format!("Invalid PTT shortcut '{}': {e}", cfg.ptt))?;
+    let toggle: Shortcut = cfg.toggle.parse().map_err(|e| format!("Invalid toggle shortcut '{}': {e}", cfg.toggle))?;
+    let cancel: Shortcut = cfg.cancel.parse().map_err(|e| format!("Invalid cancel shortcut '{}': {e}", cfg.cancel))?;
+    let quit:   Shortcut = cfg.quit.parse().map_err(|e| format!("Invalid quit shortcut '{}': {e}", cfg.quit))?;
+
+    eprintln!("[hotkeys] Parsed shortcuts: PTT={:?} Toggle={:?} Cancel={:?} Quit={:?}",
+        ptt, toggle, cancel, quit);
 
     let app_handle = app.clone();
 
     app.global_shortcut()
         .on_shortcuts([ptt, toggle, cancel, quit], move |_app, shortcut, event| {
             let shortcut_str = shortcut.to_string();
+            eprintln!("[hotkeys] FIRED: '{}' state={:?}", shortcut_str, event.state);
             let current = match HOTKEY_CONFIG.lock() {
                 Ok(g) => g.clone(),
                 Err(e) => {
@@ -125,10 +132,13 @@ fn register_with_config(app: &AppHandle, cfg: HotkeyConfig) -> Result<(), String
                 app_handle.exit(0);
             }
         })
-        .map_err(|e| format!("Failed to register shortcuts: {e}"))?;
+        .map_err(|e| {
+            eprintln!("[hotkeys] FAILED to register: {e}");
+            format!("Failed to register shortcuts: {e}")
+        })?;
 
-    log::info!(
-        "Global shortcuts registered: PTT={}, Toggle={}, Cancel={}, Quit={}",
+    eprintln!(
+        "[hotkeys] OK registered: PTT={} Toggle={} Cancel={} Quit={}",
         cfg.ptt, cfg.toggle, cfg.cancel, cfg.quit
     );
     Ok(())

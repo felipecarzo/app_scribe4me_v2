@@ -195,8 +195,10 @@ pub fn run() {
             app.manage(sidecar);
 
             // Register global shortcuts (PTT, Toggle, Cancel, Quit)
-            if let Err(e) = hotkeys::register_shortcuts(app.handle()) {
-                eprintln!("Failed to register global shortcuts: {e}");
+            eprintln!("[setup] Registering global shortcuts...");
+            match hotkeys::register_shortcuts(app.handle()) {
+                Ok(()) => eprintln!("[setup] Global shortcuts OK"),
+                Err(e) => eprintln!("[setup] FAILED global shortcuts: {e}"),
             }
 
             Ok(())
