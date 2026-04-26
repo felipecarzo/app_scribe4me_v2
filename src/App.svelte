@@ -1,6 +1,6 @@
 <script lang="ts">
   import "./app.css";
-  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { invoke } from "@tauri-apps/api/core";
   import Settings from "./lib/Settings.svelte";
   import StatusBar from "./lib/StatusBar.svelte";
   import Onboarding from "./lib/components/Onboarding.svelte";
@@ -10,9 +10,9 @@
 
   async function hideWindow() {
     try {
-      await getCurrentWindow().hide();
+      await invoke("hide_main_window");
     } catch (e) {
-      console.error("[App] hide failed:", e);
+      console.error("[App] hide_main_window failed:", e);
     }
   }
   // Expor pra Settings chamar apos salvar

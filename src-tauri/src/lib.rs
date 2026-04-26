@@ -70,6 +70,19 @@ fn update_shortcuts(
     hotkeys::reregister_shortcuts(&app, &ptt, &toggle, &cancel, &quit)
 }
 
+/// Esconde a window principal (volta pro tray).
+/// Comando Rust nativo — nao depende de capability JS core:window:allow-hide.
+#[tauri::command]
+fn hide_main_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide().map_err(|e| format!("Failed to hide: {e}"))?;
+        eprintln!("[hide_main_window] OK");
+        Ok(())
+    } else {
+        Err("Main window not found".to_string())
+    }
+}
+
 // --- App setup ---
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -203,7 +216,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_app_version, sidecar_send, update_tray_info, update_shortcuts])
+        .invoke_handler(tauri::generate_handler![get_app_version, sidecar_send, update_tray_info, update_shortcuts, hide_main_window])
         .run(tauri::generate_context!())
         .expect("error while running Scribe4me");
 }
