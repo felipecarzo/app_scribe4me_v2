@@ -141,17 +141,20 @@ class DeepgramRealtimeManager:
 
             if is_final or speech_final:
                 self._accumulated.append(transcript)
-                full = " ".join(self._accumulated)
                 if self.on_fragment:
                     self.on_fragment(transcript)
                 if self.on_final:
-                    self.on_final(full)
+                    # Mostra so o trecho recem-finalizado, nao o historico
+                    # acumulado inteiro — a pill tem largura fixa (400px,
+                    # nowrap) e trunca com "..." se o texto crescer demais.
+                    self.on_final(transcript)
                 logger.debug("Deepgram final: %s", transcript)
             else:
-                confirmed = " ".join(self._accumulated)
-                partial = (confirmed + " " + transcript).strip() if confirmed else transcript
                 if self.on_partial:
-                    self.on_partial(partial)
+                    # Interim do Deepgram ja contem a frase atual inteira
+                    # (cresce e reseta por utterance) — nao prefixar com
+                    # o historico acumulado, senao a pill trunca com "...".
+                    self.on_partial(transcript)
 
         elif msg_type == "Metadata":
             logger.debug("Deepgram metadata: %s", data)

@@ -32,7 +32,7 @@ pub fn show(app: &AppHandle) {
     let url = WebviewUrl::App("overlay.html".into());
 
     match WebviewWindowBuilder::new(app, OVERLAY_LABEL, url)
-        .title("Scribe4me Overlay")
+        .title("Scribe4me v2 Overlay")
         .inner_size(OVERLAY_W, OVERLAY_H)
         .decorations(false)
         .transparent(true)

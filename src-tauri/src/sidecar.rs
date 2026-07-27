@@ -58,7 +58,19 @@ impl SidecarManager {
     {
         log::info!("Spawning sidecar: {:?}", cmd);
 
-        eprintln!("[Tauri] Spawning sidecar: {:?}", cmd);
+        log::info!("[Tauri] Spawning sidecar: {:?}", cmd);
+
+        // O binario PyInstaller do sidecar e console subsystem (console=True no .spec,
+        // proposital para debug). Sem essa flag, o Windows abre uma janela de console
+        // visivel para ele quando o processo pai (scribe4me.exe) e GUI subsystem sem
+        // console proprio — acontece em release, nao em dev (onde o console e herdado
+        // do terminal de `cargo run`).
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
 
         let mut child = cmd
             .stdin(Stdio::piped())
@@ -141,7 +153,7 @@ impl SidecarManager {
             let reader = BufReader::new(stderr);
             for line in reader.lines() {
                 if let Ok(line) = line {
-                    eprintln!("[sidecar] {line}");
+                    log::debug!("[sidecar] {line}");
                 }
             }
         });

@@ -76,7 +76,7 @@ fn update_shortcuts(
 fn hide_main_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
         window.hide().map_err(|e| format!("Failed to hide: {e}"))?;
-        eprintln!("[hide_main_window] OK");
+        log::debug!("[hide_main_window] OK");
         Ok(())
     } else {
         Err("Main window not found".to_string())
@@ -96,7 +96,7 @@ pub fn run() {
     tauri::Builder::default()
         // Single-instance: se 2a instancia tenta abrir, foca a 1a e fecha a 2a
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            eprintln!("[single-instance] segunda instancia tentou abrir — focando primeira");
+            log::info!("[single-instance] segunda instancia tentou abrir — focando primeira");
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
@@ -134,7 +134,7 @@ pub fn run() {
             // Build tray icon
             let _tray = TrayIconBuilder::with_id("main-tray")
                 .menu(&menu)
-                .tooltip("Scribe4me — Pronto")
+                .tooltip("Scribe4me v2 — Pronto")
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
                         if let Some(window) = app.get_webview_window("main") {
@@ -182,9 +182,16 @@ pub fn run() {
             // (o config tauri.conf.json as vezes nao aplica no Windows)
             if let Some(main_window) = app.get_webview_window("main") {
                 let _ = main_window.set_skip_taskbar(true);
-                eprintln!("[setup] main window skip_taskbar applied");
+                log::info!("[setup] main window skip_taskbar applied");
+
+                // Dev: mostra a window ao iniciar pra facilitar debug.
+                // Release: fica tray-only (visible=false no tauri.conf.json).
+                #[cfg(debug_assertions)]
+                {
+                    let _ = main_window.show();
+                }
             } else {
-                eprintln!("[setup] WARNING: main window nao existe ainda em setup()");
+                log::warn!("[setup] main window nao existe ainda em setup()");
             }
 
             // Spawn Python sidecar
@@ -210,10 +217,10 @@ pub fn run() {
                     "data": data,
                 });
                 if let Err(e) = app_handle.emit("sidecar-event", &payload) {
-                    eprintln!("Failed to emit sidecar event: {e}");
+                    log::warn!("Failed to emit sidecar event: {e}");
                 }
             }) {
-                eprintln!("Failed to spawn sidecar: {e}");
+                log::error!("Failed to spawn sidecar: {e}");
                 // Continue without sidecar — UI will show disconnected state
             }
 
@@ -221,10 +228,10 @@ pub fn run() {
             app.manage(sidecar);
 
             // Register global shortcuts (PTT, Toggle, Cancel, Quit)
-            eprintln!("[setup] Registering global shortcuts...");
+            log::info!("[setup] Registering global shortcuts...");
             match hotkeys::register_shortcuts(app.handle()) {
-                Ok(()) => eprintln!("[setup] Global shortcuts OK"),
-                Err(e) => eprintln!("[setup] FAILED global shortcuts: {e}"),
+                Ok(()) => log::info!("[setup] Global shortcuts OK"),
+                Err(e) => log::error!("[setup] FAILED global shortcuts: {e}"),
             }
 
             Ok(())
@@ -252,7 +259,7 @@ fn build_sidecar_command(app: &tauri::App) -> Result<std::process::Command, Box<
             .parent()
             .ok_or("Failed to resolve workspace root from CARGO_MANIFEST_DIR")?
             .join("sidecar/sidecar_main.py");
-        eprintln!("[Tauri] Sidecar script path: {}", script.display());
+        log::debug!("[Tauri] Sidecar script path: {}", script.display());
         if !script.exists() {
             return Err(format!(
                 "Sidecar script not found: {}",
@@ -330,13 +337,13 @@ fn update_tray_icon(app: &AppHandle, status: &str) {
     };
 
     let tooltip = match status {
-        "idle" => "Scribe4me — Pronto",
-        "loading" => "Scribe4me — Carregando...",
-        "recording" => "Scribe4me — Gravando",
-        "transcribing" => "Scribe4me — Transcrevendo...",
-        "done" => "Scribe4me — Concluido",
-        "error" => "Scribe4me — Erro",
-        _ => "Scribe4me",
+        "idle" => "Scribe4me v2 — Pronto",
+        "loading" => "Scribe4me v2 — Carregando...",
+        "recording" => "Scribe4me v2 — Gravando",
+        "transcribing" => "Scribe4me v2 — Transcrevendo...",
+        "done" => "Scribe4me v2 — Concluido",
+        "error" => "Scribe4me v2 — Erro",
+        _ => "Scribe4me v2",
     };
 
     if let Some(tray) = app.tray_by_id("main-tray") {

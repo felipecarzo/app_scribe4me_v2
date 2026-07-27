@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
   import { invoke } from "@tauri-apps/api/core";
+  import { open } from "@tauri-apps/plugin-shell";
   import { appState, type Backend, type OutputMode } from "./store.svelte";
   import { sidecar } from "./sidecar";
   import Button from "./components/Button.svelte";
@@ -138,6 +139,13 @@
     { id: "profiles", label: "Profiles" },
   ];
 
+  const apiKeyUrls: Record<string, string> = {
+    openai: "https://platform.openai.com/api-keys",
+    groq: "https://console.groq.com/keys",
+    gemini: "https://aistudio.google.com/apikey",
+    deepgram: "https://console.deepgram.com/",
+  };
+
   const backendOptions: { value: Backend; label: string }[] = [
     { value: "local", label: "Local (Whisper — offline)" },
     { value: "openai", label: "OpenAI (whisper-1)" },
@@ -220,6 +228,26 @@
   <div class="flex-1 overflow-y-auto min-h-0">
     {#if activeTab === "geral"}
       <div transition:fade={{ duration: 120 }} class="space-y-6">
+        <!-- Backend selector -->
+        <div class="space-y-1.5">
+          <span class="text-sm font-semibold text-[var(--text-primary)]">Backend de transcricao</span>
+          <select
+            bind:value={appState.backend}
+            class="w-full px-3 py-2 text-sm bg-[var(--bg-secondary)] border border-[var(--border)]
+              rounded-[var(--radius-md)] text-[var(--text-secondary)] focus:outline-none
+              focus:border-[var(--accent-blue)] transition-colors"
+          >
+            {#each backendOptions as opt}
+              <option value={opt.value}>{opt.label}</option>
+            {/each}
+          </select>
+          {#if appState.backend !== "local"}
+            <p class="text-xs text-[var(--text-muted)]">Configure a chave de API na aba "API".</p>
+          {/if}
+        </div>
+
+        <hr class="border-[var(--border)]" />
+
         <!-- Output mode -->
         <fieldset class="space-y-2.5">
           <legend class="text-sm font-semibold text-[var(--text-primary)] mb-1">Modo de saida</legend>
@@ -240,27 +268,29 @@
           {/each}
         </fieldset>
 
-        <hr class="border-[var(--border)]" />
+        {#if appState.backend === "local"}
+          <hr class="border-[var(--border)]" />
 
-        <!-- Model -->
-        <fieldset class="space-y-2.5">
-          <legend class="text-sm font-semibold text-[var(--text-primary)] mb-1">Modelo Whisper (backend local)</legend>
-          {#each models as m}
-            <label class="flex items-center gap-3 cursor-pointer group">
-              <input
-                type="radio"
-                name="model"
-                value={m.value}
-                checked={appState.model === m.value}
-                onchange={() => (appState.model = m.value)}
-                class="accent-[var(--accent-blue)]"
-              />
-              <span class="text-sm text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
-                {m.label}
-              </span>
-            </label>
-          {/each}
-        </fieldset>
+          <!-- Model -->
+          <fieldset class="space-y-2.5">
+            <legend class="text-sm font-semibold text-[var(--text-primary)] mb-1">Modelo Whisper (backend local)</legend>
+            {#each models as m}
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="radio"
+                  name="model"
+                  value={m.value}
+                  checked={appState.model === m.value}
+                  onchange={() => (appState.model = m.value)}
+                  class="accent-[var(--accent-blue)]"
+                />
+                <span class="text-sm text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
+                  {m.label}
+                </span>
+              </label>
+            {/each}
+          </fieldset>
+        {/if}
       </div>
 
     {:else if activeTab === "atalhos"}
@@ -302,28 +332,22 @@
 
     {:else if activeTab === "api"}
       <div transition:fade={{ duration: 120 }} class="space-y-5">
-        <!-- Backend selector -->
-        <div class="space-y-1.5">
-          <span class="text-sm font-semibold text-[var(--text-primary)]">Backend</span>
-          <select
-            bind:value={appState.backend}
-            class="w-full px-3 py-2 text-sm bg-[var(--bg-secondary)] border border-[var(--border)]
-              rounded-[var(--radius-md)] text-[var(--text-secondary)] focus:outline-none
-              focus:border-[var(--accent-blue)] transition-colors"
-          >
-            {#each backendOptions as opt}
-              <option value={opt.value}>{opt.label}</option>
-            {/each}
-          </select>
-        </div>
-
         <!-- API Keys with inline validation -->
         {#if appState.backend !== "local"}
           <div class="space-y-3">
             <span class="text-sm font-semibold text-[var(--text-primary)]">API Keys</span>
             {#each ["openai", "groq", "gemini", "deepgram"] as provider}
               <div class="space-y-1">
-                <span class="text-xs text-[var(--text-muted)] capitalize">{provider}</span>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-[var(--text-muted)] capitalize">{provider}</span>
+                  <button
+                    type="button"
+                    onclick={() => open(apiKeyUrls[provider])}
+                    class="text-xs text-[var(--accent-blue)] hover:underline"
+                  >
+                    Pegar chave ↗
+                  </button>
+                </div>
                 <Input
                   bind:value={apiKeys[provider]}
                   type="password"
@@ -336,6 +360,10 @@
               </div>
             {/each}
           </div>
+        {:else}
+          <p class="text-sm text-[var(--text-muted)]">
+            Backend atual e "Local" — nenhuma API key necessaria. Troque o backend na aba "Geral" para usar um provedor em nuvem.
+          </p>
         {/if}
 
         <!-- Realtime toggle -->

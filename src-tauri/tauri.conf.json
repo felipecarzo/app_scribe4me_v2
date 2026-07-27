@@ -1,11 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicovank/tauri/refs/heads/v2-docs/crates/tauri-cli/schema.json",
-  "productName": "Scribe4me",
+  "productName": "Scribe4me v2",
   "version": "2.0.0",
   "identifier": "com.scribe4me.app",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:5420",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
@@ -14,23 +14,18 @@
     "windows": [
       {
         "label": "main",
-        "title": "Scribe4me",
+        "title": "Scribe4me v2",
         "width": 480,
         "height": 580,
         "resizable": false,
         "center": true,
         "decorations": false,
         "transparent": true,
-        "visible": true,
+        "visible": false,
         "skipTaskbar": true,
         "alwaysOnTop": false
       }
     ],
-    "trayIcon": {
-      "iconPath": "icons/tray-idle.png",
-      "iconAsTemplate": true,
-      "tooltip": "Scribe4me — Speech-to-text"
-    },
     "security": {
       "csp": null
     },
@@ -45,9 +40,9 @@
       "icons/128x128@2x.png",
       "icons/icon.ico"
     ],
-    "resources": [
-      "../sidecar/dist/scribe4me-sidecar/**/*"
-    ]
+    "resources": {
+      "../sidecar/dist/scribe4me-sidecar": "scribe4me-sidecar"
+    }
   },
   "plugins": {}
 }

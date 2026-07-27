@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use once_cell::sync::Lazy;
 use tauri::{AppHandle, Manager};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutEvent, ShortcutState};
 
 use crate::sidecar::SidecarManager;
 
@@ -97,60 +97,77 @@ fn register_with_config(app: &AppHandle, cfg: HotkeyConfig) -> Result<(), String
     let cancel_str = normalize(&cfg.cancel);
     let quit_str   = normalize(&cfg.quit);
 
-    eprintln!("[hotkeys] Parsing: PTT={} Toggle={} Cancel={} Quit={}",
+    log::debug!("[hotkeys] Parsing: PTT={} Toggle={} Cancel={} Quit={}",
         ptt_str, toggle_str, cancel_str, quit_str);
 
-    let ptt:    Shortcut = ptt_str.parse().map_err(|e| format!("Invalid PTT shortcut '{}': {e}", ptt_str))?;
-    let toggle: Shortcut = toggle_str.parse().map_err(|e| format!("Invalid toggle shortcut '{}': {e}", toggle_str))?;
-    let cancel: Shortcut = cancel_str.parse().map_err(|e| format!("Invalid cancel shortcut '{}': {e}", cancel_str))?;
-    let quit:   Shortcut = quit_str.parse().map_err(|e| format!("Invalid quit shortcut '{}': {e}", quit_str))?;
+    // Registra cada shortcut individualmente — se um colidir com outro app
+    // (ex: Ctrl+Alt+H ja em uso por outro programa), os demais continuam
+    // registrando normalmente ao inves de falhar tudo junto.
+    let mut errors = Vec::new();
 
-    eprintln!("[hotkeys] Parsed shortcuts: PTT={:?} Toggle={:?} Cancel={:?} Quit={:?}",
-        ptt, toggle, cancel, quit);
+    let app_h1 = app.clone();
+    if let Err(e) = register_one(app, "PTT", &ptt_str, move |_app, _shortcut, event: ShortcutEvent| {
+        match event.state {
+            ShortcutState::Pressed  => handle_start(&app_h1),
+            ShortcutState::Released => handle_stop(&app_h1),
+        }
+    }) {
+        errors.push(e);
+    }
 
-    let app_handle = app.clone();
-    // Clones para usar no closure (Shortcut implements Clone+PartialEq)
-    let ptt_c    = ptt.clone();
-    let toggle_c = toggle.clone();
-    let cancel_c = cancel.clone();
-    let quit_c   = quit.clone();
+    let app_h2 = app.clone();
+    if let Err(e) = register_one(app, "Toggle", &toggle_str, move |_app, _shortcut, event: ShortcutEvent| {
+        if event.state == ShortcutState::Pressed {
+            handle_toggle(&app_h2);
+        }
+    }) {
+        errors.push(e);
+    }
 
-    app.global_shortcut()
-        .on_shortcuts([ptt, toggle, cancel, quit], move |_app, shortcut, event| {
-            eprintln!("[hotkeys] FIRED: {:?} state={:?}", shortcut, event.state);
+    let app_h3 = app.clone();
+    if let Err(e) = register_one(app, "Cancel", &cancel_str, move |_app, _shortcut, event: ShortcutEvent| {
+        if event.state == ShortcutState::Pressed {
+            handle_cancel(&app_h3);
+        }
+    }) {
+        errors.push(e);
+    }
 
-            // PTT: start on press, stop on release
-            if shortcut == &ptt_c {
-                match event.state {
-                    ShortcutState::Pressed  => handle_start(&app_handle),
-                    ShortcutState::Released => handle_stop(&app_handle),
-                }
-                return;
-            }
+    let app_h4 = app.clone();
+    if let Err(e) = register_one(app, "Quit", &quit_str, move |_app, _shortcut, event: ShortcutEvent| {
+        if event.state == ShortcutState::Pressed {
+            app_h4.exit(0);
+        }
+    }) {
+        errors.push(e);
+    }
 
-            // Other shortcuts: only on press
-            if event.state != ShortcutState::Pressed {
-                return;
-            }
+    if errors.is_empty() {
+        log::info!(
+            "[hotkeys] OK registered: PTT={} Toggle={} Cancel={} Quit={}",
+            cfg.ptt, cfg.toggle, cfg.cancel, cfg.quit
+        );
+        Ok(())
+    } else {
+        let msg = errors.join("; ");
+        log::error!("[hotkeys] Registro parcial — {msg}");
+        Err(msg)
+    }
+}
 
-            if shortcut == &toggle_c {
-                handle_toggle(&app_handle);
-            } else if shortcut == &cancel_c {
-                handle_cancel(&app_handle);
-            } else if shortcut == &quit_c {
-                app_handle.exit(0);
-            }
-        })
-        .map_err(|e| {
-            eprintln!("[hotkeys] FAILED to register: {e}");
-            format!("Failed to register shortcuts: {e}")
-        })?;
+/// Registra um unico shortcut com seu handler. Nao aborta os outros em caso de erro.
+fn register_one<F>(app: &AppHandle, label: &str, shortcut_str: &str, handler: F) -> Result<(), String>
+where
+    F: Fn(&AppHandle, &Shortcut, ShortcutEvent) + Send + Sync + 'static,
+{
+    let shortcut: Shortcut = shortcut_str
+        .parse()
+        .map_err(|e| format!("Shortcut '{label}' invalido ({shortcut_str}): {e}"))?;
 
-    eprintln!(
-        "[hotkeys] OK registered: PTT={} Toggle={} Cancel={} Quit={}",
-        cfg.ptt, cfg.toggle, cfg.cancel, cfg.quit
-    );
-    Ok(())
+    app.global_shortcut().on_shortcut(shortcut, handler).map_err(|e| {
+        log::error!("[hotkeys] FAILED to register {label} ({shortcut_str}): {e}");
+        format!("{label} ({shortcut_str}) ja em uso por outro programa: {e}")
+    })
 }
 
 /// Start recording via sidecar. Defensive: usa try_state para nao panic.

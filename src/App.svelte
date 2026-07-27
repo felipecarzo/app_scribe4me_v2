@@ -51,7 +51,7 @@
     class="h-9 flex items-center justify-between px-4 bg-[var(--bg-secondary)]
       border-b border-[var(--border)] shrink-0"
   >
-    <span class="text-xs font-semibold text-[var(--text-muted)] select-none">Scribe4me</span>
+    <span class="text-xs font-semibold text-[var(--text-muted)] select-none">Scribe4me v2</span>
     <div class="flex items-center gap-3">
       <StatusBar />
       <ThemeToggle />
