@@ -91,6 +91,42 @@
 
 ---
 
+## Sprint 7 — Port Beta Features + Estabilizacao Dev Mode
+
+| ID | Task | Status | Notas |
+|----|------|--------|-------|
+| T7-01 | Port profiles + voice coding do beta para v2 | CONCLUIDO | 293cc28 |
+| T7-02 | Fix config plugins Tauri v2 (unit vs map) | CONCLUIDO | 0606a11, 60acc4e |
+| T7-03 | Fix conexao sidecar Python em dev mode | CONCLUIDO | 5731628, 45d63ac, 9a4ed68 — PYTHONUNBUFFERED, encoding, log file diagnostico |
+| T7-04 | 5 fixes criticos (3 auditorias paralelas) | CONCLUIDO | 21b2f3c |
+| T7-05 | Fix capabilities overlay + global-shortcut | CONCLUIDO | d64dfed |
+| T7-06 | Fix UI skipTaskbar + botao X + hide-on-save | CONCLUIDO | 4dfb431, edc101b |
+| T7-07 | Fix hotkeys formato canonico CommandOrControl | CONCLUIDO | 70edb54 diag, c615164 fix |
+| T7-08 | Fix window (hide nativo, skip_taskbar startup, single-instance) | CONCLUIDO | 067e54e, 9f4c7a4, 056e2be |
+
+Branch `feat/port-beta-features`, 15 commits acima de `main` (9ea945f). Ainda nao mergeada.
+Verificado em 2026-07-26: `cargo check` limpo, `npm run check` 0 erros (2 warnings a11y pre-existentes).
+
+---
+
+## Sprint 8 — UX Fixes + Empacotamento Windows
+
+| ID | Task | Status | Notas |
+|----|------|--------|-------|
+| T8-01 | Fix drag da janela principal | CONCLUIDO | Faltava permission `core:window:allow-start-dragging` na ACL — `data-tauri-drag-region` ja existia no HTML mas era bloqueado silenciosamente |
+| T8-02 | Fix registro de hotkeys (all-or-nothing) | CONCLUIDO | `on_shortcuts` batch abortava os 4 se 1 colidisse com outro app; reescrito para `on_shortcut` individual (register_one) — colisao em 1 nao derruba os outros |
+| T8-03 | Fix tray icon duplicado | CONCLUIDO | `trayIcon` declarado em `tauri.conf.json` E criado programaticamente em `lib.rs` — dois mecanismos, dois icones. Removida a declaracao do config |
+| T8-04 | Icones novos (tray + app) | CONCLUIDO | Placeholders eram bolinhas solidas de cor. Novos: glyph headset+mic desenhado via PIL, tray mantem cores por status, app icon com squircle+gradiente azul |
+| T8-05 | Fix overlay truncando texto com "..." | CONCLUIDO | `on_partial`/`on_final` prefixavam texto acumulado desde o inicio da gravacao; Pill tem `max-width:400px;nowrap`, CSS truncava com "...". Agora manda so o trecho atual da fala |
+| T8-06 | Botao "Pegar chave" nas API keys | CONCLUIDO | Abre a pagina de API key de cada provider no navegador (`shell:allow-open` + `@tauri-apps/plugin-shell`) |
+| T8-07 | Rename para "Scribe4me v2" em toda a UI | CONCLUIDO | productName, window title, tray tooltip, header do App.svelte — evita confusao com o v1 (Python/tkinter) instalado na mesma maquina |
+| T8-08 | Empacotamento Windows (MSI + NSIS) | CONCLUIDO | `build_sidecar.bat` (PyInstaller) + `npm run tauri build`. Fix critico: `resources` no config usava glob com `../`, Tauri preservava a estrutura (`_up_\sidecar\dist\...`) em vez de `scribe4me-sidecar\` na raiz — app crashava no primeiro boot com "Sidecar binary not found". Corrigido com mapeamento explicito `{origem: destino}` |
+| T8-09 | Fix janela de console (PowerShell) abrindo junto | CONCLUIDO (codigo) — EM TESTE | Sidecar PyInstaller e `console=True` (proposital p/ debug); em release o processo pai (GUI subsystem) forca o Windows a abrir console visivel para o filho. Fix: `CREATE_NO_WINDOW` via `CommandExt::creation_flags` no spawn. Suspeita de que isso tambem explicava overlay nao aparecer e crash inesperado reportados pelo Felipe — rebuild feito, instalador relancado, **resultado do teste ainda nao confirmado nesta sessao** |
+
+Pendente: confirmacao do Felipe que T8-09 resolveu os 3 sintomas (console popup, overlay sem texto, crash inesperado, 2 icones na taskbar ao gravar).
+
+---
+
 ## Backlog
 
 | ID | Task | Status |
@@ -103,4 +139,4 @@
 
 ---
 
-_Ultima atualizacao: 2026-04-12 — Sprint 6 concluida (8/8) — PROJETO COMPLETO_
+_Ultima atualizacao: 2026-07-27 — Sprint 8 (9/9 codigo, 1 item em teste) — empacotamento Windows funcional, fixes de UX aplicados, branch feat/port-beta-features ainda pendente merge_
