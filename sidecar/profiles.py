@@ -39,6 +39,20 @@ _BUILTIN_PROFILES = [
 ]
 
 
+def _safe_profile_path(name: str) -> Path:
+    """Resolve o path do arquivo de profile, bloqueando path traversal.
+
+    Remove separadores de diretorio e valida que o resultado final
+    continua dentro de PROFILES_DIR antes de qualquer write/delete.
+    """
+    filename = name.replace("/", "-").replace("\\", "-").replace("..", "-")
+    filename = filename.strip().replace(" ", "-") + ".txt"
+    path = (PROFILES_DIR / filename).resolve()
+    if PROFILES_DIR.resolve() not in path.parents:
+        raise ValueError(f"Nome de profile invalido: {name}")
+    return path
+
+
 @dataclass
 class Profile:
     name: str
@@ -71,8 +85,7 @@ def load_profile(path: Path) -> Profile:
 
 
 def _save_builtin(name: str, prompt: str, code_mode: bool) -> Path:
-    filename = name.replace("/", "-").replace(" ", "-") + ".txt"
-    path = PROFILES_DIR / filename
+    path = _safe_profile_path(name)
     if path.exists():
         return path
 
@@ -117,9 +130,12 @@ def get_profile_by_name(name: str) -> Profile | None:
 
 
 def save_profile(name: str, prompt: str, code_mode: bool = False) -> Profile:
+    builtin_names = {n for n, _, _ in _BUILTIN_PROFILES}
+    if name in builtin_names:
+        raise ValueError(f"Nao e possivel sobrescrever profile built-in: {name}")
+
     PROFILES_DIR.mkdir(parents=True, exist_ok=True)
-    filename = name.replace("/", "-").replace(" ", "-") + ".txt"
-    path = PROFILES_DIR / filename
+    path = _safe_profile_path(name)
 
     lines = [name]
     if code_mode:

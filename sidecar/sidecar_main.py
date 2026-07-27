@@ -581,7 +581,7 @@ def main() -> None:
         for line in sys.stdin:
             line_count += 1
             stripped = line.strip()
-            logger.info("STDIN line #%d: %r", line_count, stripped[:200])
+            logger.debug("STDIN line #%d (%d bytes)", line_count, len(stripped))
             if not stripped:
                 continue
             try:
