@@ -121,9 +121,9 @@ Verificado em 2026-07-26: `cargo check` limpo, `npm run check` 0 erros (2 warnin
 | T8-06 | Botao "Pegar chave" nas API keys | CONCLUIDO | Abre a pagina de API key de cada provider no navegador (`shell:allow-open` + `@tauri-apps/plugin-shell`) |
 | T8-07 | Rename para "Scribe4me v2" em toda a UI | CONCLUIDO | productName, window title, tray tooltip, header do App.svelte — evita confusao com o v1 (Python/tkinter) instalado na mesma maquina |
 | T8-08 | Empacotamento Windows (MSI + NSIS) | CONCLUIDO | `build_sidecar.bat` (PyInstaller) + `npm run tauri build`. Fix critico: `resources` no config usava glob com `../`, Tauri preservava a estrutura (`_up_\sidecar\dist\...`) em vez de `scribe4me-sidecar\` na raiz — app crashava no primeiro boot com "Sidecar binary not found". Corrigido com mapeamento explicito `{origem: destino}` |
-| T8-09 | Fix janela de console (PowerShell) abrindo junto | CONCLUIDO (codigo) — EM TESTE | Sidecar PyInstaller e `console=True` (proposital p/ debug); em release o processo pai (GUI subsystem) forca o Windows a abrir console visivel para o filho. Fix: `CREATE_NO_WINDOW` via `CommandExt::creation_flags` no spawn. Suspeita de que isso tambem explicava overlay nao aparecer e crash inesperado reportados pelo Felipe — rebuild feito, instalador relancado, **resultado do teste ainda nao confirmado nesta sessao** |
+| T8-09 | Fix janela de console (PowerShell) abrindo junto | CONCLUIDO | Sidecar PyInstaller e `console=True` (proposital p/ debug); em release o processo pai (GUI subsystem) forca o Windows a abrir console visivel para o filho. Fix: `CREATE_NO_WINDOW` via `CommandExt::creation_flags` no spawn. Confirmado via teste automatizado (keybd_event simulando `Ctrl+Alt+T`, ciclo completo start/stop): conhost interno existe mas fica invisivel (`MainWindowHandle: 0`), sem crash, sem processo/icone duplicado |
 
-Pendente: confirmacao do Felipe que T8-09 resolveu os 3 sintomas (console popup, overlay sem texto, crash inesperado, 2 icones na taskbar ao gravar).
+Sprint 8 completa e verificada. Pendente: aprovacao do Felipe pra commitar os 23 arquivos de codigo (Sprint 7 + 8).
 
 ---
 
@@ -139,4 +139,4 @@ Pendente: confirmacao do Felipe que T8-09 resolveu os 3 sintomas (console popup,
 
 ---
 
-_Ultima atualizacao: 2026-07-27 — Sprint 8 (9/9 codigo, 1 item em teste) — empacotamento Windows funcional, fixes de UX aplicados, branch feat/port-beta-features ainda pendente merge_
+_Ultima atualizacao: 2026-07-27 — Sprint 8 concluida e testada (9/9) — empacotamento Windows funcional, fixes de UX confirmados, branch feat/port-beta-features ainda pendente merge_

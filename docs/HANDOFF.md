@@ -35,27 +35,25 @@ Sequencia de bugs reportados pelo Felipe testando o app empacotado, na ordem:
    com `../`, e o Tauri preservava a estrutura de pasta (virou `_up_\sidecar\dist\...` em vez de
    `scribe4me-sidecar\` na raiz dos resources) — o binario do sidecar nunca era encontrado. Fix: mapeamento
    explicito `{origem: destino}` no `resources`.
-7. **[EM TESTE — resultado nao confirmado]** App instalado abria um PowerShell/console vazio junto, overlay
-   as vezes nao aparecia, app fechava inesperadamente durante gravacao, e apareciam 2 icones na taskbar ao
-   ativar gravacao. Causa suspeita: binario PyInstaller do sidecar e `console=True` (proposital p/ debug) —
-   em release, como o processo pai (`scribe4me.exe`) e GUI subsystem sem console proprio, o Windows abre uma
-   janela de console visivel pro filho (nao acontecia em dev pois o console e herdado do terminal de
-   `cargo run`). A hipotese e que essa janela de console (que aparece na taskbar, rouba foco) explicava os
-   outros 3 sintomas em cascata. Fix aplicado: `CREATE_NO_WINDOW` via `CommandExt::creation_flags` no spawn
-   do sidecar (`src-tauri/src/sidecar.rs`). Rebuild feito, instalador relancado — **a sessao encerrou antes
-   do Felipe confirmar se resolveu**.
+7. **[CONFIRMADO]** App instalado abria um PowerShell/console vazio junto, overlay as vezes nao aparecia,
+   app fechava inesperadamente durante gravacao, e apareciam 2 icones na taskbar ao ativar gravacao. Causa:
+   binario PyInstaller do sidecar e `console=True` (proposital p/ debug) — em release, como o processo pai
+   (`scribe4me.exe`) e GUI subsystem sem console proprio, o Windows abre uma janela de console visivel pro
+   filho (nao acontecia em dev pois o console e herdado do terminal de `cargo run`). Fix aplicado:
+   `CREATE_NO_WINDOW` via `CommandExt::creation_flags` no spawn do sidecar (`src-tauri/src/sidecar.rs`).
+   Testado via automacao (keybd_event simulando `Ctrl+Alt+T`, ciclo completo start/stop de gravacao):
+   conhost interno existe mas com `MainWindowHandle: 0` (sem janela visivel), sem crash, sem processo ou
+   icone duplicado. **Sprint 8 fechada e verificada.**
 
 ## Proximo passo exato
 
-1. **Perguntar ao Felipe** se o rebuild com `CREATE_NO_WINDOW` resolveu os 4 sintomas do item 7 acima
-   (console popup, overlay sem texto, crash, 2 icones na taskbar). Se nao resolveu, investigar mais fundo
-   (pode ser causa distinta do console — nao foi possivel confirmar a hipotese nesta sessao).
-2. Se confirmado ok: revisar os 23 arquivos modificados (`git status`) e pedir aprovacao do Felipe pra
-   commitar (Sprint 7 correcoes de seguranca + Sprint 8 UX/empacotamento).
-3. Apos commit: decidir merge `feat/port-beta-features` -> `main` (ainda nao rodou pipeline completo
+1. Felipe revisa os 23 arquivos modificados (`git status`) e aprova o commit do codigo — Sprint 7
+   (correcoes de seguranca do Revisor) + Sprint 8 (UX + empacotamento). Nenhum commit de codigo foi feito
+   ainda (regra do projeto: nunca commitar sem pedido explicito).
+2. Apos commit: decidir merge `feat/port-beta-features` -> `main` (ainda nao rodou pipeline completo
    Revisor -> Felipe -> SM pros commits novos desta sessao).
-4. `npm audit`: 4 vulnerabilidades pendentes de investigacao (1 moderate, 3 high) — ainda nao investigado.
-5. `vite.config.ts` porta mudada de 1420 para 5420 (Windows reserva 1357-1456 nesta maquina especifica —
+3. `npm audit`: 4 vulnerabilidades pendentes de investigacao (1 moderate, 3 high) — ainda nao investigado.
+4. `vite.config.ts` porta mudada de 1420 para 5420 (Windows reserva 1357-1456 nesta maquina especifica —
    Hyper-V/WSL exclusion range). Isso e config de ambiente local, nao logica do app; avaliar se deve ficar
    assim no repo ou virar variavel de ambiente/override local nao commitado.
 
