@@ -127,6 +127,36 @@ Sprint 8 completa e verificada. Pendente: aprovacao do Felipe pra commitar os 23
 
 ---
 
+## Sprint 9 · Tradutor dentro do Scribe4me
+
+Decidido pelo Felipe em 2026-09-25: *"quero colocar esse tradutor dentro dele e depois melhorar
+ele mais ainda"*. O tradutor foi feito e testado no WhatsApp em
+`D:\Documentos\projetos\tradutor` (repo github.com/felipecarzo/trandutor). Ler de la:
+`trandutor.py` (logica, 150 linhas), `docs/produto/MVP.md` (o que o produto tem que ser),
+`docs/diario/2026-09-25.md` (o defeito de teclado ja resolvido).
+
+O que ele faz hoje: atalho troca o texto do campo do chat pela traducao (DeepL, plano gratis do
+Felipe), outro volta o original, outro troca o idioma, e outro traduz o texto selecionado para
+portugues num balao perto do mouse. Guarda e devolve o que estava na area de transferencia.
+
+Atalho: a gravacao continua em Ctrl+Alt+T. A traducao do campo vai para **Ctrl+Alt+Y**
+(decisao do Felipe). Os outros do tradutor nao colidem: Ctrl+Alt+Z desfazer, Ctrl+Alt+I idioma,
+Ctrl+Alt+L ler.
+
+| ID | Task | Status | Notas |
+|----|------|--------|-------|
+| T9-01 | Sidecar: traduzir, desfazer, ler, proximo idioma | PENDENTE | Portar a classe `Trandutor` e `traduzir_deepl`. Reusar `clipboard.py` do sidecar |
+| T9-02 | Atalhos no Rust para as 4 acoes | PENDENTE | Via global-shortcut, que nao tem o defeito da lib `keyboard` (atalho rodando dentro da escuta do teclado travava ctrl/alt) |
+| T9-03 | Balao da leitura | PENDENTE | Janela flutuante perto do mouse, some em 12 s ou com clique |
+| T9-04 | Chave DeepL e idiomas nas configuracoes | PENDENTE | Junto das API keys que ja existem, com o botao "Pegar chave" |
+| T9-05 | Teste real no WhatsApp e no WeChat | PENDENTE | Felipe confere; teclado tem que seguir normal depois |
+
+Depois desta sprint, o resto do MVP do tradutor (idioma automatico pela ultima mensagem, Enter que
+traduz e envia, leitura automatica da tela) entra aqui como Sprint 10, na ordem de
+`tradutor/docs/ROADMAP.md`.
+
+---
+
 ## Backlog
 
 | ID | Task | Status |
